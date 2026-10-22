@@ -1,0 +1,564 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal - Class Trip Ledger</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- html2canvas for Thermal Slip save -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Sora"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            receipt: ['"Space Mono"', 'monospace']
+          },
+          colors: {
+            college: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .slip-58mm {
+      width: 230px !important;
+      font-size: 11px !important;
+    }
+
+    .slip-80mm {
+      width: 320px !important;
+      font-size: 12px !important;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+
+      #printArea,
+      #printArea * {
+        visibility: visible !important;
+      }
+
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col text-slate-900">
+
+  <!-- ================= HEADER ================= -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-xl bg-gradient-to-tr from-college-600 to-indigo-500 text-white flex items-center justify-center shadow-md">
+          <i class="fa-solid fa-graduation-cap text-base"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-display font-extrabold text-base sm:text-lg text-slate-900">My Trip Ledger</h1>
+            <span
+              class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+              Student Portal
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium" id="studentGreeting">Loading student info...</p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <button onclick="handleLogout()"
+          class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-xs font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-right-from-bracket text-xs"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="max-w-4xl mx-auto px-4 py-5 w-full flex-1 space-y-5">
+
+    <!-- Profile & Metrics Grid -->
+    <div
+      class="bg-gradient-to-br from-indigo-900 to-college-800 rounded-3xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
+      <!-- Decorative background icon -->
+      <i class="fa-solid fa-plane-departure absolute -right-6 -bottom-6 text-8xl text-white/5 pointer-events-none"></i>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-700/60 pb-4">
+        <div>
+          <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Registered Student</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold font-display mt-0.5" id="heroStudentName">--</h2>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs font-mono bg-white/10 px-2 py-0.5 rounded-md border border-white/10"
+              id="heroRollNumber">ROLL: --</span>
+            <span id="heroVerifiedBadge" class="hidden text-xs font-bold text-sky-300 flex items-center gap-1">
+              <i class="fa-solid fa-circle-check text-sky-400"></i> Verified Contributor
+            </span>
+          </div>
+        </div>
+
+        <div class="sm:text-right">
+          <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Payment Status</span>
+          <div id="statusBadgeContainer" class="mt-1">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md">
+              Checking...
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Cards -->
+      <div class="grid grid-cols-3 gap-2 sm:gap-4 mt-5">
+        <div class="bg-white/10 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10">
+          <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-200 block">Total
+            Paid</span>
+          <div class="text-base sm:text-2xl font-extrabold text-emerald-400 font-display mt-1">
+            ₹<span id="statTotalPaid">0</span>
+          </div>
+          <span class="text-[10px] text-emerald-200/80 mt-0.5 block truncate">
+            ₹<span id="statVerifiedPaid">0</span> Verified
+          </span>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10">
+          <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-200 block">Per-Head
+            Target</span>
+          <div class="text-base sm:text-2xl font-extrabold text-white font-display mt-1">
+            ₹<span id="statTargetBudget">0</span>
+          </div>
+          <span class="text-[10px] text-indigo-200/80 mt-0.5 block truncate">Trip Budget Share</span>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10">
+          <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-200 block">Balance
+            Due</span>
+          <div class="text-base sm:text-2xl font-extrabold font-display mt-1" id="statBalanceValue">
+            ₹<span id="statRemainingBalance">0</span>
+          </div>
+          <span class="text-[10px] text-indigo-200/80 mt-0.5 block truncate" id="balanceStatusLabel">Pending</span>
+        </div>
+      </div>
+
+      <!-- Per-Person Trip Fee Breakdown -->
+      <div class="mt-4 p-3 sm:p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 text-white">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xs text-indigo-300">
+              <i class="fa-solid fa-receipt"></i>
+            </span>
+            <div>
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                Total Per Person: ₹<span id="statPerPersonTotal">15,000</span>
+              </div>
+              <div class="text-[10px] text-indigo-200">Trip Package & Train Ticket Share</div>
+            </div>
+          </div>
+          <span class="text-[10px] uppercase tracking-wider font-extrabold text-indigo-200 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">Official Breakdown</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-black/20 p-2.5 rounded-xl flex items-center justify-between border border-white/5">
+            <div class="flex items-center gap-1.5 text-indigo-200 text-[11px]">
+              <i class="fa-solid fa-hotel text-indigo-400"></i>
+              <span>Package Fee</span>
+            </div>
+            <span class="font-extrabold text-white text-xs">₹<span id="statPackageFee">12,500</span></span>
+          </div>
+          <div class="bg-black/20 p-2.5 rounded-xl flex items-center justify-between border border-white/5">
+            <div class="flex items-center gap-1.5 text-amber-200 text-[11px]">
+              <i class="fa-solid fa-train text-amber-400"></i>
+              <span>Train Tickets</span>
+            </div>
+            <span class="font-extrabold text-white text-xs">₹<span id="statTrainFee">2,500</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Target Progress Bar -->
+      <div class="mt-4 space-y-1.5">
+        <div class="flex justify-between text-xs font-bold text-indigo-100">
+          <span>Contribution Progress</span>
+          <span id="progressPercentLabel">0%</span>
+        </div>
+        <div class="w-full bg-black/20 h-2.5 rounded-full overflow-hidden p-0.5">
+          <div id="progressBarFill"
+            class="bg-gradient-to-r from-emerald-400 to-teal-300 h-full rounded-full transition-all duration-500"
+            style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PAYMENT HISTORY LEDGER ================= -->
+    <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+        <div>
+          <h3 class="font-display font-bold text-base text-slate-900">My Payment History</h3>
+          <p class="text-xs text-slate-500">Official itemized contributions recorded by the trip organizer</p>
+        </div>
+        <span class="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full" id="paymentCountLabel">
+          0 Entries
+        </span>
+      </div>
+
+      <div id="paymentListContainer" class="space-y-3">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= RECEIPT VIEWER MODAL ================= -->
+  <div id="receiptViewerModal"
+    class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden"
+    onclick="closeReceiptViewer()">
+    <div class="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl p-4 space-y-2.5"
+      onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <span class="text-xs font-bold text-slate-800" id="receiptViewerTitle">Attached Proof</span>
+        <button onclick="closeReceiptViewer()"
+          class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <div class="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-50 rounded-2xl p-2">
+        <img id="receiptViewerImg" src="" alt="Payment Receipt"
+          class="max-h-[65vh] w-auto object-contain rounded-lg shadow-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= THERMAL RECEIPT SLIP MODAL ================= -->
+  <div id="thermalReceiptModal"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-3 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-receipt text-emerald-400 text-xs"></i>
+          <span class="font-display font-bold text-xs sm:text-sm">Official Slip</span>
+        </div>
+        <button onclick="closeThermalSlipModal()"
+          class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <div class="p-6 bg-slate-200/70 overflow-y-auto flex items-center justify-center flex-1">
+        <div id="thermalSlipContainer"
+          class="slip-58mm bg-white text-black font-receipt p-4 shadow-xl border border-slate-300 text-[11px] leading-tight select-none">
+        </div>
+      </div>
+      <div class="p-3.5 bg-white border-t border-slate-100 grid grid-cols-2 gap-2.5">
+        <button onclick="downloadSlipAsImage()"
+          class="py-2.5 px-3 bg-college-600 hover:bg-college-700 active:scale-98 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i class="fa-solid fa-file-image text-xs"></i><span>Save Image</span>
+        </button>
+        <button onclick="printThermalSlipDirect()"
+          class="py-2.5 px-3 bg-slate-900 hover:bg-black active:scale-98 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i class="fa-solid fa-print text-xs"></i><span>Print Slip</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="printArea" class="hidden"></div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    let studentData = null;
+    let currentSlipTx = null;
+
+    function getVerifiedBadgeSvg(sizeClass = "w-4 h-4") {
+      return `
+        <svg class="${sizeClass} shrink-0 inline-block select-none" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1.5l1.45 1.8 2.3-.47 1.05 2.08 2.3.43.38 2.3 1.95 1.21-.36 2.3 1.41 1.83-1.12 2.03.73 2.22-2.18.95-.26 2.32-2.3.2-1 2.1-2.26-.59L12 22.5l-1.39-1.78-2.26.59-1-2.1-2.3-.2-.26-2.32-2.18-.95.73-2.22-1.12-2.03 1.41-1.83-.36-2.3 1.95-1.21.38-2.3 2.3-.43 1.05-2.08 2.3.47L12 1.5z" fill="#0095F6"/>
+          <path d="M7.5 12.3l3.2 3.2 6.3-6.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    function showDashboardError(message) {
+      let box = document.getElementById('dashboardError');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'dashboardError';
+        box.className = 'rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900';
+        document.querySelector('main').prepend(box);
+      }
+      box.textContent = message;
+      box.classList.remove('hidden');
+    }
+
+    async function loadStudentDashboard() {
+      try {
+        // Authentication is checked separately from the dashboard API.
+        const authRes = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!authRes.ok) {
+          showDashboardError(`Unable to verify login (HTTP ${authRes.status}). Please refresh and try again.`);
+          return;
+        }
+        const auth = await authRes.json();
+        if (!auth.authenticated) {
+          window.location.replace('/login.html');
+          return;
+        }
+        if (auth.user?.role !== 'student') {
+          showDashboardError('This session is not a student account. Log out and sign in as a student.');
+          return;
+        }
+
+        document.getElementById('studentGreeting').textContent =
+          `Roll No: ${auth.user.rollNumber || '--'} • ${auth.user.name || 'Student'}`;
+        document.getElementById('heroStudentName').textContent = auth.user.name || 'Student';
+        document.getElementById('heroRollNumber').textContent = `ROLL: ${auth.user.rollNumber || '--'}`;
+
+        const res = await fetch('/api/student/dashboard', { credentials: 'same-origin' });
+        if (!res.ok) {
+          const reason = res.status === 404
+            ? 'Dashboard API not found (404). Check that GET /api/student/dashboard exists and is mounted in server.js.'
+            : res.status === 401 || res.status === 403
+              ? `Dashboard access rejected (HTTP ${res.status}). Check the student route middleware and server session.`
+              : `Dashboard could not load (HTTP ${res.status}). Check server logs.`;
+          showDashboardError(reason);
+          console.error(reason);
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.student || !data.financialSummary || !Array.isArray(data.payments)) {
+          showDashboardError('Dashboard API returned an unexpected response. Check its JSON structure.');
+          return;
+        }
+        studentData = data;
+        renderDashboard(data);
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+        showDashboardError('Unable to connect to the server or read the dashboard response. Check your connection and browser console.');
+      }
+    }
+
+    function renderDashboard(data) {
+      const student = data.student;
+      const fin = data.financialSummary;
+
+      document.getElementById('studentGreeting').innerText = `Roll No: ${student.rollNumber} • ${student.name}`;
+      document.getElementById('heroStudentName').innerText = student.name;
+      document.getElementById('heroRollNumber').innerText = `ROLL: ${student.rollNumber}`;
+
+      document.getElementById('statTotalPaid').innerText = fin.totalPaid.toLocaleString('en-IN');
+      document.getElementById('statVerifiedPaid').innerText = fin.verifiedPaid.toLocaleString('en-IN');
+      document.getElementById('statTargetBudget').innerText = fin.perHeadBudget.toLocaleString('en-IN');
+      const packageFee = fin.packageFee !== undefined ? fin.packageFee : 12500;
+      const trainFee = fin.trainTicketFee !== undefined ? fin.trainTicketFee : 2500;
+      const totalPerPerson = fin.perHeadBudget || (packageFee + trainFee);
+      if (document.getElementById('statPerPersonTotal')) document.getElementById('statPerPersonTotal').innerText = totalPerPerson.toLocaleString('en-IN');
+      if (document.getElementById('statPackageFee')) document.getElementById('statPackageFee').innerText = packageFee.toLocaleString('en-IN');
+      if (document.getElementById('statTrainFee')) document.getElementById('statTrainFee').innerText = trainFee.toLocaleString('en-IN');
+      document.getElementById('statRemainingBalance').innerText = fin.remainingBalance.toLocaleString('en-IN');
+
+      const balValEl = document.getElementById('statBalanceValue');
+      const balLabelEl = document.getElementById('balanceStatusLabel');
+      const statusBadgeContainer = document.getElementById('statusBadgeContainer');
+      const heroVerifiedBadge = document.getElementById('heroVerifiedBadge');
+
+      if (fin.isBudgetMet) {
+        balValEl.className = "text-base sm:text-2xl font-extrabold text-emerald-400 font-display mt-1";
+        balLabelEl.innerText = "All Paid ✓";
+        statusBadgeContainer.innerHTML = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1 inline-flex"><i class="fa-solid fa-check"></i> Target Completed</span>`;
+      } else {
+        balValEl.className = `text-base sm:text-2xl font-extrabold font-display mt-1 ${fin.remainingBalance > 0 ? 'text-amber-300' : 'text-white'}`;
+        balLabelEl.innerText = fin.perHeadBudget > 0 ? "Pending Payment" : "Budget Pending";
+        statusBadgeContainer.innerHTML = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 flex items-center gap-1 inline-flex"><i class="fa-solid fa-clock"></i> In Progress</span>`;
+      }
+
+      if (fin.verifiedPaid > 0 && fin.verifiedPaid >= fin.totalPaid) {
+        heroVerifiedBadge.classList.remove('hidden');
+      }
+
+      // Progress bar
+      document.getElementById('progressPercentLabel').innerText = `${fin.progressPercent}%`;
+      document.getElementById('progressBarFill').style.width = `${fin.progressPercent}%`;
+
+      // Payments list
+      renderPayments(data.payments);
+    }
+
+    function renderPayments(payments) {
+      const container = document.getElementById('paymentListContainer');
+      document.getElementById('paymentCountLabel').innerText = `${payments.length} ${payments.length === 1 ? 'Entry' : 'Entries'}`;
+
+      if (payments.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid fa-receipt text-slate-300 text-3xl mb-2"></i>
+            <p class="text-xs font-bold text-slate-600">No payment records found yet</p>
+            <p class="text-[10px] text-slate-400 mt-1">Once the trip organizer logs and verifies your contribution, it will appear here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = payments.map((p, idx) => `
+        <div class="relative bg-white border ${p.isVerified ? 'border-sky-200 bg-sky-50/20 ring-1 ring-sky-300/30' : 'border-slate-200'} p-4 rounded-2xl shadow-sm hover:shadow transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          ${p.isVerified ? `<div class="absolute top-3 right-3" title="Verified by Admin">${getVerifiedBadgeSvg("w-4 h-4")}</div>` : ''}
+          <div class="flex items-start gap-3 min-w-0 flex-1 pr-6 sm:pr-0">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+              <i class="fa-solid fa-arrow-down-left text-sm"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-bold text-xs sm:text-sm text-slate-900">${escapeHtml(p.description || 'Trip Contribution')}</span>
+                <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${p.mode === 'gpay' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} font-mono">${p.mode}</span>
+                <span class="text-[10px] font-medium text-slate-400">${p.date}</span>
+              </div>
+              ${p.remark ? `<div class="text-[10px] font-mono text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-2 mt-2 leading-relaxed whitespace-pre-line">${escapeHtml(p.remark)}</div>` : ''}
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:items-end justify-between sm:justify-end gap-2 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+            <div class="text-left sm:text-right">
+              <div class="text-base font-extrabold text-emerald-600 font-display flex items-center sm:justify-end gap-1.5">
+                <span>+ ₹${Number(p.amount).toLocaleString('en-IN')}</span>
+                ${p.isVerified ? getVerifiedBadgeSvg("w-3.5 h-3.5") : ''}
+              </div>
+              <span class="text-[10px] font-semibold ${p.isVerified ? 'text-sky-600' : 'text-slate-400'}">
+                ${p.isVerified ? 'Verified Authentic' : 'Pending Verification'}
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="openThermalSlipModal('${p.id}')" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 text-[11px] font-semibold">
+                <i class="fa-solid fa-receipt text-slate-500 text-[10px]"></i> <span>Slip</span>
+              </button>
+              ${p.receiptImage ? `
+                <button onclick="viewReceiptModal('${p.receiptImage}', '${escapeHtml(p.description || 'Receipt')}')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-college-600 transition flex items-center gap-1 text-[11px] font-semibold">
+                  <i class="fa-solid fa-eye text-[10px]"></i> <span>View Bill</span>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function viewReceiptModal(base64, title) {
+      document.getElementById("receiptViewerImg").src = base64;
+      document.getElementById("receiptViewerTitle").innerText = `Bill Receipt: ${title}`;
+      document.getElementById("receiptViewerModal").classList.remove("hidden");
+    }
+    function closeReceiptViewer() {
+      document.getElementById("receiptViewerModal").classList.add("hidden");
+    }
+
+    function openThermalSlipModal(id) {
+      if (!studentData) return;
+      const tx = studentData.payments.find(p => p.id === id);
+      if (!tx) return;
+      currentSlipTx = tx;
+      renderThermalSlip(tx);
+      document.getElementById("thermalReceiptModal").classList.remove("hidden");
+    }
+    function closeThermalSlipModal() {
+      document.getElementById("thermalReceiptModal").classList.add("hidden");
+    }
+
+    function renderThermalSlip(tx) {
+      const container = document.getElementById("thermalSlipContainer");
+      const modeLabel = (tx.mode || 'CASH').toUpperCase();
+      const studentName = studentData?.student?.name || 'Student';
+      const rollNumber = studentData?.student?.rollNumber || '';
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      container.innerHTML = `
+        <div style="text-align: center; margin-bottom: 6px;">
+          <div style="font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;">CLASS TRIP LEDGER</div>
+          <div style="font-size: 10px; font-weight: 600;">IV FINANCE MANAGER</div>
+          <div style="font-size: 9px; margin-top: 2px;">*** OFFICIAL STUDENT PAYMENT RECEIPT ***</div>
+        </div>
+        <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin: 6px 0; font-size: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>DATE: ${tx.date}</span><span>TIME: ${timestamp}</span></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 2px;"><span>MODE: [ ${modeLabel} ]</span><span>${tx.isVerified ? '[VERIFIED]' : ''}</span></div>
+        </div>
+        <div style="margin: 6px 0;">
+          <div style="font-size: 9px; text-transform: uppercase; color: #333;">STUDENT:</div>
+          <div style="font-weight: 700; font-size: 11.5px; margin-top: 1px;">${escapeHtml(studentName)} (${escapeHtml(rollNumber)})</div>
+          <div style="font-size: 9px; color: #555; margin-top: 2px;">DESC: ${escapeHtml(tx.description || 'Trip Contribution')}</div>
+        </div>
+        ${tx.remark ? `<div style="margin: 4px 0; padding: 3px 0; border-top: 1px dotted #888; font-size: 8.5px; font-family: monospace; white-space: pre-line;">${escapeHtml(tx.remark)}</div>` : ''}
+        <div style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 0; margin: 6px 0; display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-weight: 700; font-size: 11.5px;">AMOUNT PAID:</span>
+          <span style="font-weight: 700; font-size: 15px;">₹${Number(tx.amount).toLocaleString('en-IN')}</span>
+        </div>
+        <div style="text-align: center; margin-top: 6px; font-size: 8px; color: #555;">powered by maddiverse</div>
+      `;
+    }
+
+    function downloadSlipAsImage() {
+      const slipEl = document.getElementById("thermalSlipContainer");
+      if (!slipEl || !currentSlipTx) return;
+      html2canvas(slipEl, { scale: 3, backgroundColor: "#ffffff" }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `Receipt_${studentData?.student?.rollNumber || 'Student'}_${currentSlipTx.date}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    }
+
+    function printThermalSlipDirect() {
+      if (!currentSlipTx) return;
+      const printContainer = document.getElementById("printArea");
+      const slipHtml = document.getElementById("thermalSlipContainer").innerHTML;
+      printContainer.innerHTML = `<div style="font-family: 'Space Mono', monospace; color: black; max-width: 58mm; margin: 0; padding: 2px;">${slipHtml}</div>`;
+      closeThermalSlipModal();
+      setTimeout(() => { window.print(); }, 200);
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) { }
+      window.location.href = '/login.html';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStudentDashboard);
+  </script>
+</body>
+
+</html>
+
+

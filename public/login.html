@@ -1,0 +1,171 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Login - Class Trip Ledger</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Sora"', 'sans-serif']
+          },
+          colors: {
+            college: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen flex flex-col items-center justify-center p-4">
+
+  <!-- File protocol warning if user double-clicked HTML file -->
+  <div id="fileProtocolWarning" class="hidden mb-4 max-w-md w-full bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 shadow-sm text-xs space-y-1">
+    <div class="font-bold flex items-center gap-1.5 text-amber-800">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>Opened as a local file</span>
+    </div>
+    <p>You opened this file directly from disk (<code class="bg-amber-100 px-1 rounded">file://</code>). To connect to the database and log in, please open <a href="http://localhost:3000" class="font-bold text-college-700 underline">http://localhost:3000</a> in your browser.</p>
+  </div>
+
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-college-600 to-indigo-700 p-7 text-white text-center">
+      <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner mb-3">
+        <i class="fa-solid fa-graduation-cap"></i>
+      </div>
+      <h1 class="text-xl font-extrabold font-display">Student Portal Login</h1>
+      <p class="text-xs text-indigo-100 mt-1 font-medium">Class Trip Ledger & Student Finance</p>
+    </div>
+
+    <!-- Form Section -->
+    <div class="p-6">
+      <!-- Alert Box -->
+      <div id="errorAlert" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation shrink-0 text-sm"></i>
+        <span id="errorMessage">Invalid credentials</span>
+      </div>
+
+      <!-- Student Login Form -->
+      <form id="studentLoginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Student Roll Number</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-3 text-slate-400 text-xs">
+              <i class="fa-solid fa-id-card"></i>
+            </span>
+            <input type="text" id="studentRollNumber" required autofocus placeholder="e.g. 4, 15, 24, 21CS01" class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-college-600 uppercase">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Secret Code / Password</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-3 text-slate-400 text-xs">
+              <i class="fa-solid fa-key"></i>
+            </span>
+            <input type="password" id="studentPassword" required placeholder="Enter 4-digit secret code" class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-college-600">
+            <button type="button" id="toggleStudentPassBtn" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Secret code provided by trip organizer</p>
+        </div>
+
+        <button type="submit" id="studentSubmitBtn" class="w-full py-3 bg-gradient-to-r from-college-600 to-indigo-600 hover:from-college-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer mt-2">
+          <span>View My Trip Account</span>
+          <i class="fa-solid fa-arrow-right text-[11px]"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer info -->
+    <div class="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] text-slate-400 font-medium">
+      <i class="fa-solid fa-lock text-slate-400 mr-1"></i> End-to-End Encrypted Session &middot; Student Portal
+    </div>
+  </div>
+
+  <script>
+    function togglePassVisibility(inputId) {
+      const el = document.getElementById(inputId);
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    function showError(msg) {
+      const alert = document.getElementById('errorAlert');
+      document.getElementById('errorMessage').innerText = msg;
+      alert.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('errorAlert').classList.add('hidden');
+    }
+
+    async function handleStudentLogin(e) {
+      if (e) e.preventDefault();
+      hideError();
+      const btn = document.getElementById('studentSubmitBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-sm"></i> <span>Verifying...</span>`;
+      btn.disabled = true;
+
+      const payload = {
+        role: 'student',
+        rollNumber: document.getElementById('studentRollNumber').value.trim(),
+        password: document.getElementById('studentPassword').value
+      };
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'Authentication failed. Please verify credentials.');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        // Redirect directly to student portal
+        window.location.href = data.redirectTo || '/student.html';
+      } catch (err) {
+        showError('Network error connecting to server. Please check your internet or server status.');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // Attach listeners once DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.location.protocol === 'file:') {
+        document.getElementById('fileProtocolWarning').classList.remove('hidden');
+      }
+
+      document.getElementById('toggleStudentPassBtn').addEventListener('click', () => togglePassVisibility('studentPassword'));
+      document.getElementById('studentLoginForm').addEventListener('submit', handleStudentLogin);
+    });
+  </script>
+</body>
+</html>

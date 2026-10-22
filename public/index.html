@@ -1,0 +1,2775 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Class Trip Ledger</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- html2canvas for Direct Image Slip Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Tesseract.js for Client-Side Screenshot OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Sora:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            display: ['"Sora"', '"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            receipt: ['"Space Mono"', 'monospace'],
+          },
+          colors: {
+            college: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+            }
+          },
+          boxShadow: {
+            'glow': '0 10px 25px -5px rgba(79, 70, 229, 0.3), 0 8px 10px -6px rgba(79, 70, 229, 0.2)',
+            'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
+            'nav-locked': '0 -4px 20px -2px rgba(15, 23, 42, 0.08), 0 -2px 6px -1px rgba(15, 23, 42, 0.04)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .slip-58mm {
+      width: 230px !important;
+      font-size: 11px !important;
+    }
+
+    .slip-80mm {
+      width: 320px !important;
+      font-size: 12px !important;
+    }
+
+    .multiline-remark {
+      white-space: pre-line;
+      line-height: 1.4;
+      font-size: 10px;
+    }
+
+    @keyframes verifyBadgePop {
+      0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+      }
+
+      60% {
+        transform: scale(1.35) rotate(12deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    .badge-pop-anim {
+      animation: verifyBadgePop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes verifyCardPulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 149, 246, 0.6);
+      }
+
+      30% {
+        transform: scale(1.015);
+        box-shadow: 0 0 0 10px rgba(0, 149, 246, 0.15);
+      }
+
+      100% {
+        transform: scale(1);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    .verify-card-effect {
+      animation: verifyCardPulse 0.5s ease-out;
+    }
+
+    #appBottomNav {
+      contain: layout style;
+      isolation: isolate;
+      z-index: 9999 !important;
+    }
+
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #printArea,
+      #printArea * {
+        visibility: visible !important;
+      }
+
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 12px;
+        background: white !important;
+        display: block !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .avoid-break {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+
+<body class="font-sans antialiased min-h-screen pb-40 sm:pb-36 flex flex-col tracking-tight"
+  onclick="closeAllCustomDropdowns(event)">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-subtle">
+    <div class="max-w-5xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-xl bg-gradient-to-tr from-college-600 to-indigo-500 text-white flex items-center justify-center shadow-md shadow-indigo-200 ring-1 ring-indigo-500/20">
+          <i class="fa-solid fa-bus text-base"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-display font-extrabold text-base sm:text-lg text-slate-900 tracking-tight leading-tight">
+              Class Trip Ledger</h1>
+            <span id="cloudStatusBadge"
+              class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+              <i class="fa-solid fa-cloud text-emerald-600 text-[9px]"></i> Atlas Cloud
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium">IV Finance Manager &bull; Admin Portal</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button onclick="openStudentModal()"
+          class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-indigo-200/70 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 transition text-xs font-semibold flex items-center gap-1.5 shadow-subtle active:scale-95"
+          title="Manage Students">
+          <i class="fa-solid fa-users text-indigo-600 text-sm"></i>
+          <span class="hidden sm:inline">Students</span>
+        </button>
+        <button onclick="openWhatsAppModal()"
+          class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-200/70 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 transition text-xs font-semibold flex items-center gap-1.5 shadow-subtle active:scale-95"
+          title="Share WhatsApp Summary">
+          <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i>
+          <span class="hidden sm:inline">WhatsApp</span>
+        </button>
+        <button onclick="openRecycleBinModal()"
+          class="relative px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-xs font-semibold flex items-center gap-1.5 shadow-subtle bg-white active:scale-95"
+          title="30-Day Trash Bin">
+          <i class="fa-solid fa-trash-can-arrow-up text-rose-500 text-xs"></i>
+          <span class="hidden sm:inline">Trash</span>
+          <span id="binCountBadge"
+            class="hidden absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+        </button>
+        <button onclick="openDataModal()"
+          class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-xs font-semibold flex items-center gap-1.5 shadow-subtle bg-white active:scale-95"
+          title="Export, Backup & Migrate">
+          <i class="fa-solid fa-file-export text-college-600 text-xs"></i>
+          <span class="hidden sm:inline">Export</span>
+        </button>
+        <!-- Logout button -->
+        <button onclick="handleAdminLogout()"
+          class="px-2 sm:px-2.5 py-1.5 rounded-xl border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 transition text-xs font-semibold flex items-center gap-1 active:scale-95"
+          title="Logout Admin">
+          <i class="fa-solid fa-right-from-bracket text-xs"></i>
+          <span class="hidden md:inline">Logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= LOCAL STORAGE MIGRATION BANNER ================= -->
+  <div id="migrationBanner" class="hidden max-w-5xl mx-auto px-4 mt-3 w-full">
+    <div
+      class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-subtle">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-database text-xs"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-slate-900">Found Local Storage Records</h4>
+          <p class="text-[11px] text-slate-600">Preserve your previous trip records by migrating them to MongoDB Atlas
+            in one click.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="migrateLocalStorageToMongo()"
+          class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+          Migrate Now
+        </button>
+        <button onclick="dismissMigrationBanner()" class="text-xs text-slate-400 hover:text-slate-600 px-2 py-1">
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="max-w-5xl mx-auto px-4 py-4 w-full flex-1">
+
+    <!-- Quick Metrics -->
+    <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
+      <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-subtle">
+        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Total
+          Income</span>
+        <div class="text-base sm:text-xl font-extrabold text-emerald-600 font-display flex items-baseline">
+          ₹<span id="quickTotalIncome">0</span>
+        </div>
+      </div>
+      <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-subtle">
+        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Total
+          Expense</span>
+        <div class="text-base sm:text-xl font-extrabold text-rose-600 font-display flex items-baseline">
+          ₹<span id="quickTotalExpense">0</span>
+        </div>
+      </div>
+      <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-subtle">
+        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Net
+          Balance</span>
+        <div class="text-base sm:text-xl font-extrabold text-slate-900 font-display flex items-baseline">
+          ₹<span id="quickNetBalance">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= VIEW 1: EXPENSE VIEW ================= -->
+    <section id="expenseView" class="view-panel block space-y-3.5">
+      <div class="flex items-center justify-between flex-wrap gap-2.5">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 font-display">Expense Ledger</h2>
+          <p class="text-xs text-slate-500">Track IV expenditures & generate POS thermal vouchers</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="toggleExpenseViewMode()" id="expenseViewToggleBtn"
+            class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-1.5 shadow-subtle transition active:scale-95">
+            <i class="fa-solid fa-list-ul text-college-600" id="expenseViewIcon"></i>
+            <span id="expenseViewToggleText">Line View</span>
+          </button>
+          <div class="relative">
+            <input type="text" id="expenseSearch" oninput="renderExpenses()" placeholder="Search description..."
+              class="pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-college-600 w-32 sm:w-44 shadow-subtle font-medium">
+            <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-[10px]"></i>
+          </div>
+
+          <div class="relative inline-block text-left" onclick="event.stopPropagation()">
+            <button type="button" onclick="toggleCustomDropdown('expenseModeMenu')" id="expenseModeBtn"
+              class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 font-semibold flex items-center justify-between gap-2 shadow-subtle hover:bg-slate-50 active:scale-95">
+              <span id="expenseModeLabel">All Modes</span>
+              <i class="fa-solid fa-chevron-down text-[9px] text-slate-400"></i>
+            </button>
+            <div id="expenseModeMenu"
+              class="hidden absolute right-0 mt-1.5 w-28 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-20 text-xs font-semibold">
+              <div onclick="selectExpenseModeFilter('all', 'All Modes')"
+                class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-slate-700">All Modes</div>
+              <div onclick="selectExpenseModeFilter('gpay', 'GPay')"
+                class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-blue-700">GPay</div>
+              <div onclick="selectExpenseModeFilter('cash', 'Cash')"
+                class="px-3 py-2 hover:bg-emerald-50 cursor-pointer text-emerald-700">Cash</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="expenseListContainer" class="space-y-2.5"></div>
+    </section>
+
+    <!-- ================= VIEW 2: INCOME VIEW ================= -->
+    <section id="incomeView" class="view-panel hidden space-y-3.5">
+      <div class="flex items-center justify-between flex-wrap gap-2.5">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 font-display">Income Ledger</h2>
+          <p class="text-xs text-slate-500">Track student trip collections & issue receipts</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="toggleIncomeViewMode()" id="incomeViewToggleBtn"
+            class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-1.5 shadow-subtle transition active:scale-95">
+            <i class="fa-solid fa-list-ul text-college-600" id="incomeViewIcon"></i>
+            <span id="incomeViewToggleText">Line View</span>
+          </button>
+          <div class="relative">
+            <input type="text" id="incomeSearch" oninput="renderIncome()" placeholder="Search source..."
+              class="pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-college-600 w-28 sm:w-40 shadow-subtle font-medium">
+            <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-[10px]"></i>
+          </div>
+
+          <!-- Custom Student Filter Selector -->
+          <div class="relative inline-block text-left" onclick="event.stopPropagation()">
+            <button type="button" onclick="toggleCustomDropdown('incomeStudentMenu')" id="incomeStudentBtn"
+              class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 font-semibold flex items-center justify-between gap-1.5 shadow-subtle hover:bg-slate-50 max-w-[130px] active:scale-95">
+              <span id="incomeStudentLabel" class="truncate">All Students</span>
+              <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 shrink-0"></i>
+            </button>
+            <div id="incomeStudentMenu"
+              class="hidden absolute right-0 mt-1.5 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-20 text-xs font-semibold max-h-48 overflow-y-auto custom-scrollbar">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Custom Mode Filter Selector -->
+          <div class="relative inline-block text-left" onclick="event.stopPropagation()">
+            <button type="button" onclick="toggleCustomDropdown('incomeModeMenu')" id="incomeModeBtn"
+              class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 font-semibold flex items-center justify-between gap-2 shadow-subtle hover:bg-slate-50 active:scale-95">
+              <span id="incomeModeLabel">All Modes</span>
+              <i class="fa-solid fa-chevron-down text-[9px] text-slate-400"></i>
+            </button>
+            <div id="incomeModeMenu"
+              class="hidden absolute right-0 mt-1.5 w-28 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-20 text-xs font-semibold">
+              <div onclick="selectIncomeModeFilter('all', 'All Modes')"
+                class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-slate-700">All Modes</div>
+              <div onclick="selectIncomeModeFilter('gpay', 'GPay')"
+                class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-blue-700">GPay</div>
+              <div onclick="selectIncomeModeFilter('cash', 'Cash')"
+                class="px-3 py-2 hover:bg-emerald-50 cursor-pointer text-emerald-700">Cash</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="incomeListContainer" class="space-y-2.5"></div>
+    </section>
+
+    <!-- ================= VIEW 3: ANALYSIS VIEW ================= -->
+    <section id="analysisView" class="view-panel hidden space-y-5">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 font-display">Financial Analysis & Balances</h2>
+          <p class="text-xs text-slate-500">Live reconciliation of GPay and Cash reserves</p>
+        </div>
+        <button onclick="openWhatsAppModal()"
+          class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-2 shadow-subtle transition active:scale-95">
+          <i class="fa-brands fa-whatsapp"></i>
+          <span>WhatsApp Report</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <!-- GPay Card -->
+        <div
+          class="bg-gradient-to-br from-blue-50/80 to-indigo-50/50 p-4 rounded-2xl border border-blue-100 shadow-subtle space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Google Pay (GPay)</h3>
+                <p class="text-[10px] text-slate-500">Online Transfers & UPI</p>
+              </div>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 font-bold text-blue-700">Digital</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-blue-200/50 text-center sm:text-left">
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Total In</p>
+              <p class="text-xs sm:text-sm font-extrabold text-emerald-600 font-display">₹<span
+                  id="analysisGpayIn">0</span></p>
+            </div>
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Total Out</p>
+              <p class="text-xs sm:text-sm font-extrabold text-rose-600 font-display">₹<span
+                  id="analysisGpayOut">0</span></p>
+            </div>
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Net GPay</p>
+              <p class="text-xs sm:text-sm font-extrabold text-blue-700 font-display">₹<span
+                  id="analysisGpayBal">0</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cash Card -->
+        <div
+          class="bg-gradient-to-br from-emerald-50/80 to-teal-50/50 p-4 rounded-2xl border border-emerald-100 shadow-subtle space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <i class="fa-solid fa-money-bill-wave text-xs"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-xs sm:text-sm">Physical Cash</h3>
+                <p class="text-[10px] text-slate-500">Cash in hand</p>
+              </div>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 font-bold text-emerald-700">Cash</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-emerald-200/50 text-center sm:text-left">
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Total In</p>
+              <p class="text-xs sm:text-sm font-extrabold text-emerald-600 font-display">₹<span
+                  id="analysisCashIn">0</span></p>
+            </div>
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Total Out</p>
+              <p class="text-xs sm:text-sm font-extrabold text-rose-600 font-display">₹<span
+                  id="analysisCashOut">0</span></p>
+            </div>
+            <div>
+              <p class="text-[9px] uppercase font-bold text-slate-400">Net Cash</p>
+              <p class="text-xs sm:text-sm font-extrabold text-emerald-700 font-display">₹<span
+                  id="analysisCashBal">0</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Income Breakdown -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-subtle space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-sm text-slate-900 font-display">Students Income Breakdown</h3>
+            <p class="text-[11px] text-slate-500">Categorized distribution across all students</p>
+          </div>
+          <span class="text-xs text-slate-400 font-semibold" id="studentCountLabel">0 Students</span>
+        </div>
+        <div id="studentBreakdownContainer" class="space-y-2.5 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Per-student budget target comparison -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-subtle space-y-3.5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 class="font-bold text-sm text-slate-900 font-display">Student Budget Progress</h3>
+            <p class="text-[11px] text-slate-500">Compare each student's income received against the per-head budget.
+            </p>
+          </div>
+          <div class="w-full sm:w-auto sm:min-w-64">
+            <div class="flex items-center justify-between mb-1">
+              <label for="perHeadBudgetInput" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Budget per student (₹)</label>
+              <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">₹12,500 Pkg + ₹2,500 Train</span>
+            </div>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-slate-400 font-bold text-sm">₹</span>
+              <input id="perHeadBudgetInput" type="number" min="0" step="0.01" inputmode="decimal"
+                placeholder="15000" oninput="handleBudgetInputChange(this.value)"
+                class="w-full sm:w-64 pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:outline-none focus:border-college-600">
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Total ₹15,000 per person (₹12,500 package fee + ₹2,500 train tickets)</p>
+          </div>
+        </div>
+        <div id="budgetSummaryCards" class="grid grid-cols-3 gap-2"></div>
+        <div class="flex items-center gap-3 flex-wrap text-[10px] font-semibold text-slate-500">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Budget
+            reached</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Income
+            received</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400"></span>Remaining</span>
+        </div>
+        <div id="studentBudgetBreakdown" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add New Entry FAB -->
+  <button onclick="openTransactionModal()" aria-label="Add Transaction"
+    class="fixed right-5 bottom-24 sm:bottom-22 z-40 h-12 px-4 sm:px-5 bg-gradient-to-r from-college-600 to-indigo-600 hover:from-college-700 hover:to-indigo-700 active:scale-95 text-white rounded-full shadow-glow border border-white/20 transition-all duration-200 flex items-center justify-center gap-2 group">
+    <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+      <i class="fa-solid fa-plus text-xs"></i>
+    </div>
+    <span class="text-xs font-bold tracking-tight">New Entry</span>
+  </button>
+
+  <!-- Bottom Navigation -->
+  <footer id="appBottomNav"
+    class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200/90 shadow-nav-locked select-none pointer-events-auto">
+    <nav class="max-w-md mx-auto grid grid-cols-3 gap-2 pt-1.5 px-6">
+      <button onclick="switchTab('expense')" id="navExpense"
+        class="nav-btn flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+        <i class="fa-solid fa-receipt text-base mb-0.5"></i>
+        <span class="text-[11px] font-semibold">Expense</span>
+      </button>
+      <button onclick="switchTab('income')" id="navIncome"
+        class="nav-btn flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+        <i class="fa-solid fa-hand-holding-dollar text-base mb-0.5"></i>
+        <span class="text-[11px] font-semibold">Income</span>
+      </button>
+      <button onclick="switchTab('analysis')" id="navAnalysis"
+        class="nav-btn flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+        <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+        <span class="text-[11px] font-semibold">Analysis</span>
+      </button>
+    </nav>
+    <div id="maddyWatermarkContainer"
+      class="text-center py-1 pb-1.5 text-[9px] uppercase font-bold tracking-widest text-slate-400 border-t border-slate-100 bg-slate-50/80 flex items-center justify-center gap-1.5 font-mono">
+      <i class="fa-solid fa-bolt text-[8px] text-college-600"></i>
+      <span>powered by maddiverse &bull; MongoDB Atlas</span>
+    </div>
+  </footer>
+
+  <!-- ================= MODAL: ADD / EDIT TRANSACTION ================= -->
+  <div id="txModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 id="modalTitle" class="font-display font-bold text-base text-slate-900">Add New Entry</h3>
+          <p class="text-xs text-slate-500 font-medium">Record Class Trip income or expenditure</p>
+        </div>
+        <button onclick="closeTransactionModal()"
+          class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <div class="p-5 pb-0">
+        <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-3 text-xs font-bold">
+          <button type="button" onclick="setModalType('income')" id="modalTabIncome"
+            class="py-2 rounded-xl transition-all text-slate-600">
+            <i class="fa-solid fa-arrow-down-left text-emerald-600 mr-1"></i> Income
+          </button>
+          <button type="button" onclick="setModalType('expense')" id="modalTabExpense"
+            class="py-2 rounded-xl transition-all text-slate-600">
+            <i class="fa-solid fa-arrow-up-right text-rose-600 mr-1"></i> Expense
+          </button>
+        </div>
+      </div>
+
+      <form id="txForm" onsubmit="handleFormSubmit(event)"
+        class="px-5 pb-5 overflow-y-auto custom-scrollbar space-y-3 flex-1">
+        <input type="hidden" id="editItemId" value="">
+        <input type="hidden" id="txModeValue" value="gpay">
+        <input type="hidden" id="txStudentValue" value="">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Amount (₹) *</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-slate-400 font-bold text-sm font-display">₹</span>
+              <input type="number" step="any" min="0.01" id="txAmount" required placeholder="0.00"
+                class="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold font-display focus:bg-white focus:outline-none focus:border-college-600">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Mode of Transaction *</label>
+            <div class="grid grid-cols-2 p-0.5 bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold">
+              <button type="button" onclick="setFormModeSelector('gpay')" id="formModeBtnGpay"
+                class="py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition bg-white text-blue-700 shadow-subtle">
+                <i class="fa-solid fa-mobile-screen text-[11px]"></i> GPay
+              </button>
+              <button type="button" onclick="setFormModeSelector('cash')" id="formModeBtnCash"
+                class="py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition text-slate-500 hover:text-slate-700">
+                <i class="fa-solid fa-money-bill-wave text-[11px]"></i> Cash
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Date (DD-MM-YY) *</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="txDate" readonly required
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none cursor-pointer"
+              onclick="openCalendarPicker('txDate')">
+            <button type="button" onclick="openCalendarPicker('txDate')"
+              class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 text-xs">
+              <i class="fa-regular fa-calendar text-college-600"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="incomeFields" class="space-y-3">
+          <div class="relative" onclick="event.stopPropagation()">
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Select Student *</label>
+            <button type="button" onclick="toggleCustomDropdown('formStudentDropdownMenu')" id="formStudentSelectBtn"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold flex items-center justify-between hover:bg-white transition text-slate-700">
+              <span id="formStudentSelectedText">Select Student</span>
+              <i class="fa-solid fa-chevron-down text-[9px] text-slate-400"></i>
+            </button>
+            <div id="formStudentDropdownMenu"
+              class="hidden absolute left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-30 max-h-40 overflow-y-auto custom-scrollbar text-xs font-medium">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div id="expenseFields" class="hidden space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">Paid To / Given To *</label>
+            <input type="text" id="txExpenseWhoGave" placeholder="e.g., Travels / Caterer"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-college-600">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Short Description (Optional)</label>
+          <input type="text" id="txDescription" placeholder="e.g., Food / Advance payment"
+            class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-college-600">
+        </div>
+
+        <div class="pt-0.5">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-bold text-slate-700">Receipt Photo / Screenshot</label>
+            <span id="ocrScanningBadge"
+              class="hidden text-[9px] text-college-600 font-bold items-center gap-1 animate-pulse font-mono">
+              <i class="fa-solid fa-spinner fa-spin"></i> Reading screenshot...
+            </span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <label
+              class="flex-1 cursor-pointer flex items-center justify-center gap-2 py-1.5 px-3 bg-slate-50 hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl text-xs font-semibold text-slate-600 transition">
+              <i class="fa-solid fa-camera text-college-600 text-xs"></i>
+              <span id="uploadStatusText">Attach Bill Screenshot</span>
+              <input type="file" id="receiptFileInput" accept="image/*" onchange="handleReceiptFileSelect(event)"
+                class="hidden">
+            </label>
+            <div id="receiptPreviewBox"
+              class="hidden relative w-9 h-9 rounded-lg overflow-hidden border border-slate-300 bg-slate-100 flex items-center justify-center shrink-0">
+              <img id="receiptThumbImg" src="" alt="Thumbnail" class="w-full h-full object-cover">
+              <button type="button" onclick="removeSelectedReceipt()"
+                class="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-[9px] opacity-0 hover:opacity-100 transition"
+                title="Remove">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-0.5">
+            <label class="block text-[11px] font-bold text-slate-700">Remark (From, To, UPI ID)</label>
+            <button type="button" onclick="resetDefaultRemarkTemplate()"
+              class="text-[9px] font-bold text-college-600 hover:underline">Reset</button>
+          </div>
+          <textarea id="txRemark" rows="3"
+            class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[10.5px] font-mono text-slate-800 focus:bg-white focus:outline-none focus:border-college-600 leading-tight custom-scrollbar"
+            placeholder="From : -&#10;To : -&#10;Upi transaction id : -"></textarea>
+        </div>
+
+        <div class="pt-1.5">
+          <button type="submit" id="saveButton"
+            class="w-full py-2.5 bg-gradient-to-r from-college-600 to-indigo-600 hover:from-college-700 hover:to-indigo-700 active:scale-98 text-white rounded-xl font-bold text-xs shadow-glow transition duration-150">
+            Save Transaction
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STUDENTS MANAGEMENT ================= -->
+  <div id="studentModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[88vh]">
+      <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-users text-indigo-600"></i>
+          <div>
+            <h3 class="font-display font-bold text-base text-slate-900">Manage Students & Credentials</h3>
+            <p class="text-[10px] text-slate-500">Students use Roll Number + Password to log in</p>
+          </div>
+        </div>
+        <button onclick="closeStudentModal()"
+          class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <div class="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider" id="studentCountText">0 Students
+            Registered</p>
+          <span class="text-[10px] text-indigo-600 font-semibold">MongoDB Atlas Synced</span>
+        </div>
+
+        <!-- Add Student Form -->
+        <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-3 space-y-2">
+          <div class="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-plus text-indigo-600"></i> Add New Student
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="newStudentName" placeholder="Full Name *"
+              class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600">
+            <input type="text" id="newStudentRoll" placeholder="Roll No (e.g. 21CS01)"
+              class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold uppercase focus:outline-none focus:border-indigo-600">
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="newStudentPassword" placeholder="Custom Password (leave blank for default)"
+              class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-600">
+            <button onclick="addNewStudent()"
+              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+              Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Students List -->
+        <div id="studentListContainer" class="space-y-2 max-h-[42vh] overflow-y-auto custom-scrollbar pr-1">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: POS THERMAL PRINTER SLIP ================= -->
+  <div id="thermalReceiptModal"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-3 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-receipt text-emerald-400 text-xs"></i>
+          <span class="font-display font-bold text-xs sm:text-sm">POS Thermal Slip</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="bg-slate-800 p-0.5 rounded-xl flex text-[10px] font-bold">
+            <button onclick="setSlipPaperWidth('58mm')" id="btnWidth58"
+              class="px-2.5 py-1 rounded-lg bg-college-600 text-white transition">58mm</button>
+            <button onclick="setSlipPaperWidth('80mm')" id="btnWidth80"
+              class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">80mm</button>
+          </div>
+          <button onclick="closeThermalSlipModal()"
+            class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 bg-slate-200/70 overflow-y-auto custom-scrollbar flex items-center justify-center flex-1">
+        <div id="thermalSlipContainer"
+          class="slip-58mm bg-white text-black font-receipt p-4 shadow-xl border border-slate-300 text-[11px] leading-tight select-none">
+        </div>
+      </div>
+      <div class="p-3.5 bg-white border-t border-slate-100 grid grid-cols-2 gap-2.5">
+        <button onclick="downloadSlipAsImage()"
+          class="py-2.5 px-3 bg-college-600 hover:bg-college-700 active:scale-98 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-subtle transition">
+          <i class="fa-solid fa-file-image text-xs"></i><span>Save Image</span>
+        </button>
+        <button onclick="printThermalSlipDirect()"
+          class="py-2.5 px-3 bg-slate-900 hover:bg-black active:scale-98 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i class="fa-solid fa-print text-xs"></i><span>Print Slip</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: 30-DAY RECYCLE BIN ================= -->
+  <div id="recycleBinModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 p-5 space-y-3.5 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-sm text-slate-900">Recycle Bin</h3>
+            <p class="text-[10px] text-slate-500">Deleted entries stored securely in MongoDB</p>
+          </div>
+        </div>
+        <button onclick="closeRecycleBinModal()"
+          class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <div id="recycleBinList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1"></div>
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+        <button onclick="emptyRecycleBin()" id="emptyBinBtn" class="text-xs text-rose-600 font-bold hover:underline">
+          <i class="fa-solid fa-trash-xmark mr-1"></i> Empty Trash
+        </button>
+        <button onclick="closeRecycleBinModal()"
+          class="px-3.5 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-200">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: WHATSAPP SUMMARY ================= -->
+  <div id="whatsappModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 p-5 space-y-3.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-sm text-slate-900">WhatsApp Summary</h3>
+            <p class="text-[10px] text-slate-500 font-medium">Formatted for Class Trip groups</p>
+          </div>
+        </div>
+        <button onclick="closeWhatsAppModal()"
+          class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <div>
+        <textarea id="whatsappTextPreview" readonly
+          class="w-full h-44 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none resize-none leading-relaxed"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="copyWhatsAppSummary()"
+          class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <i class="fa-regular fa-copy"></i><span id="copyBtnText">Copy Text</span>
+        </button>
+        <button onclick="launchWhatsAppDirect()"
+          class="py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-subtle transition">
+          <i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: RECEIPT VIEWER ================= -->
+  <div id="receiptViewerModal"
+    class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden"
+    onclick="closeReceiptViewer()">
+    <div class="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl p-4 space-y-2.5"
+      onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <span class="text-xs font-bold text-slate-800" id="receiptViewerTitle">Attached Receipt</span>
+        <button onclick="closeReceiptViewer()"
+          class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <div class="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-50 rounded-2xl p-2">
+        <img id="receiptViewerImg" src="" alt="Bill Receipt"
+          class="max-h-[65vh] w-auto object-contain rounded-lg shadow-subtle">
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CUSTOM CALENDAR ================= -->
+  <div id="calendarModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-xs p-4 shadow-2xl border border-slate-100 space-y-3">
+      <div class="flex items-center justify-between">
+        <button onclick="calPrevMonth()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-600">
+          <i class="fa-solid fa-chevron-left text-xs"></i>
+        </button>
+        <span id="calMonthYearTitle" class="font-bold text-xs text-slate-800 font-display"></span>
+        <button onclick="calNextMonth()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-600">
+          <i class="fa-solid fa-chevron-right text-xs"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400">
+        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+      </div>
+      <div id="calDaysGrid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+        <button onclick="setCalToday()" class="text-[11px] font-bold text-college-600 hover:underline">Select
+          Today</button>
+        <button onclick="closeCalendarPicker()"
+          class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: EXPORT, BACKUP & MIGRATION ================= -->
+  <div id="dataModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-display font-bold text-base text-slate-900">Export, Backup & Migrate</h3>
+          <p class="text-xs text-slate-500 font-medium">Download reports & manage cloud data</p>
+        </div>
+        <button onclick="closeDataModal()"
+          class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- PDF Reports -->
+      <div class="space-y-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PDF Reports</span>
+        <button onclick="exportToPDF('minimal')"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center text-xs shadow-xs"><i
+                class="fa-solid fa-file-pdf"></i></div>
+            <div>
+              <p class="text-xs font-bold text-slate-900">1. Minimal PDF (With Student Stats)</p>
+              <p class="text-[10px] text-slate-500">Compact ledger + Student summary distribution</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-print text-rose-600 text-xs"></i>
+        </button>
+        <button onclick="exportToPDF('minimal-no-dept')"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center text-xs shadow-xs">
+              <i class="fa-solid fa-table-list"></i></div>
+            <div>
+              <p class="text-xs font-bold text-slate-900">2. Minimal PDF (Without Student Stats)</p>
+              <p class="text-[10px] text-slate-500">Clean income & expense tables</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-print text-amber-600 text-xs"></i>
+        </button>
+        <button onclick="exportToPDF('with-receipts')"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div
+              class="w-8 h-8 rounded-xl bg-college-600 text-white flex items-center justify-center text-xs shadow-xs"><i
+                class="fa-solid fa-images"></i></div>
+            <div>
+              <p class="text-xs font-bold text-slate-900">3. Complete PDF with Receipts</p>
+              <p class="text-[10px] text-slate-500">Side-by-side audit layout with receipt photos</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-camera text-college-600 text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Spreadsheets -->
+      <div class="space-y-2 pt-1">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Spreadsheets</span>
+        <button onclick="exportToCSV()"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div
+              class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs shadow-xs"><i
+                class="fa-solid fa-file-csv"></i></div>
+            <div>
+              <p class="text-xs font-bold text-slate-900">Export Structured CSV</p>
+              <p class="text-[10px] text-slate-500">Clean multi-section table with totals</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-download text-emerald-600 text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Migration & Cloud Sync -->
+      <div class="space-y-2 pt-2 border-t border-slate-100">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cloud & Local Migration</span>
+        <button onclick="migrateLocalStorageToMongo()"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-amber-300 bg-amber-50/50 hover:bg-amber-100/60 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs"><i
+                class="fa-solid fa-cloud-arrow-up"></i></div>
+            <div>
+              <p class="text-xs font-bold text-amber-900">Sync Local Storage to MongoDB</p>
+              <p class="text-[10px] text-amber-700">Uploads all offline records to cloud database</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-upload text-amber-600 text-xs"></i>
+        </button>
+
+        <button onclick="exportJSONBackup()"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xs"><i
+                class="fa-solid fa-cloud-arrow-down"></i></div>
+            <div>
+              <p class="text-xs font-bold text-slate-900">Download Full JSON Snapshot</p>
+              <p class="text-[10px] text-slate-500">Includes all records, students, and receipts</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-download text-slate-400 text-xs"></i>
+        </button>
+        <label
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer transition text-left active:scale-98">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs"><i
+                class="fa-solid fa-file-import"></i></div>
+            <div>
+              <p class="text-xs font-bold text-indigo-900">Restore Data from JSON Backup</p>
+              <p class="text-[10px] text-indigo-600">Imports JSON file directly to MongoDB Atlas</p>
+            </div>
+          </div>
+          <input type="file" id="jsonFileInput" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+          <span class="text-xs font-bold text-indigo-700">Browse</span>
+        </label>
+
+        <button onclick="resetEntireDatabase()"
+          class="w-full flex items-center justify-between p-2.5 rounded-2xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 transition text-left active:scale-98 mt-2">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-xs"><i
+                class="fa-solid fa-power-off"></i></div>
+            <div>
+              <p class="text-xs font-bold text-rose-900">Factory Reset Cloud Database</p>
+              <p class="text-[10px] text-rose-600">Wipe all cloud data and start fresh</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-trash-can text-rose-400 text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CUSTOM CONFIRMATION ================= -->
+  <div id="confirmModal"
+    class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 text-center space-y-3">
+      <div
+        class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-lg shadow-xs">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 id="confirmModalTitle" class="font-display font-bold text-sm text-slate-900">Are you sure?</h3>
+        <p id="confirmModalMsg" class="text-xs text-slate-500 mt-0.5">This action cannot be undone.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button id="confirmCancelBtn"
+          class="py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">Cancel</button>
+        <button id="confirmOkBtn"
+          class="py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-200">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+  <div id="printArea" class="hidden"></div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    let STUDENTS = []; // List of student objects { id, name, rollNumber, initialPassword }
+    let transactions = [];
+    let recycleBin = [];
+    let perHeadBudget = 15000;
+
+    let activeTab = 'expense';
+    let currentModalType = 'income';
+
+    let expenseViewMode = 'detailed';
+    let incomeViewMode = 'detailed';
+
+    let expenseModeFilterVal = 'all';
+    let incomeModeFilterVal = 'all';
+    let incomeStudentFilterVal = 'all';
+
+    let currentReceiptBase64 = null;
+    let calCurrentDate = new Date();
+    let calTargetInputId = 'txDate';
+
+    let currentThermalSlipTx = null;
+    let currentPaperWidth = '58mm';
+
+    function getVerifiedBadgeSvg(sizeClass = "w-4 h-4") {
+      return `
+        <svg class="${sizeClass} shrink-0 inline-block select-none" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1.5l1.45 1.8 2.3-.47 1.05 2.08 2.3.43.38 2.3 1.95 1.21-.36 2.3 1.41 1.83-1.12 2.03.73 2.22-2.18.95-.26 2.32-2.3.2-1 2.1-2.26-.59L12 22.5l-1.39-1.78-2.26.59-1-2.1-2.3-.2-.26-2.32-2.18-.95.73-2.22-1.12-2.03 1.41-1.83-.36-2.3 1.95-1.21.38-2.3 2.3-.43 1.05-2.08 2.3.47L12 1.5z" fill="#0095F6"/>
+          <path d="M7.5 12.3l3.2 3.2 6.3-6.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    function parseDateToTimestamp(dateStr) {
+      if (!dateStr) return 0;
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        let y = parseInt(parts[2], 10);
+        if (y < 100) y += 2000;
+        return new Date(y, m, d).getTime() || 0;
+      }
+      return new Date(dateStr).getTime() || 0;
+    }
+
+    function sortRecentFirst(a, b) {
+      const timeA = parseDateToTimestamp(a.date);
+      const timeB = parseDateToTimestamp(b.date);
+      if (timeB !== timeA) return timeB - timeA;
+      const createdA = a.createdAt || (a.id && a.id.startsWith('tx_') ? parseInt(a.id.split('_')[1]) || 0 : 0);
+      const createdB = b.createdAt || (b.id && b.id.startsWith('tx_') ? parseInt(b.id.split('_')[1]) || 0 : 0);
+      return createdB - createdA;
+    }
+
+    // ================= INITIALIZATION & AUTH CHECK =================
+    document.addEventListener("DOMContentLoaded", async () => {
+      await verifyAdminSession();
+      await fetchAllCloudData();
+      checkLocalStorageMigrationPossibility();
+      initDefaultDate();
+      switchTab('expense');
+    });
+
+    async function verifyAdminSession() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (!data.authenticated || !data.user || data.user.role !== 'admin') {
+          await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+          window.location.href = '/admin-login.html';
+        }
+      } catch (err) {
+        window.location.href = '/admin-login.html';
+      }
+    }
+
+    async function handleAdminLogout() {
+      const confirmed = await showCustomConfirm("Admin Logout", "Are you sure you want to log out of the admin session?");
+      if (confirmed) {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) { }
+        window.location.href = '/admin-login.html';
+      }
+    }
+
+    // ================= DATA FETCHING FROM MONGODB =================
+    async function fetchAllCloudData() {
+      try {
+        // Fetch Students
+        const stuRes = await fetch('/api/students');
+        if (stuRes.ok) {
+          STUDENTS = await stuRes.json();
+        }
+
+        // Fetch Transactions & Recycle Bin
+        const txRes = await fetch('/api/transactions');
+        if (txRes.ok) {
+          const txData = await txRes.json();
+          transactions = (txData.transactions || []).map(t => {
+            if (!t.student || t.student.trim() === '') t.student = 'General';
+            t.isVerified = !!t.isVerified;
+            return t;
+          });
+          recycleBin = txData.recycleBin || [];
+        }
+
+        // Fetch Settings (Budget per student)
+        const setRes = await fetch('/api/settings');
+        if (setRes.ok) {
+          const settings = await setRes.json();
+          if (settings.perHeadBudget !== undefined && !isNaN(Number(settings.perHeadBudget))) {
+            perHeadBudget = Number(settings.perHeadBudget);
+            const input = document.getElementById('perHeadBudgetInput');
+            if (input) input.value = perHeadBudget || '';
+          }
+        }
+
+        populateCustomStudentDropdowns();
+        refreshUI();
+      } catch (err) {
+        console.error("Failed to fetch cloud data:", err);
+        showToast("Error connecting to cloud database", "error");
+      }
+    }
+
+    function refreshUI() {
+      renderExpenses();
+      renderIncome();
+      renderAnalysis();
+      updateQuickMetrics();
+      updateRecycleBinBadge();
+    }
+
+    // ================= LOCAL STORAGE MIGRATION =================
+    function checkLocalStorageMigrationPossibility() {
+      try {
+        const legacyRecords = localStorage.getItem("MADDYS_LEDGER_PERMANENT_MASTER_STORE");
+        const legacyStudents = localStorage.getItem("MADDYS_LEDGER_STUDENTS_STORE");
+        if (legacyRecords || legacyStudents) {
+          const parsed = legacyRecords ? JSON.parse(legacyRecords) : [];
+          if (Array.isArray(parsed) && parsed.length > 0 && transactions.length <= 1) {
+            document.getElementById('migrationBanner').classList.remove('hidden');
+          }
+        }
+      } catch (e) { }
+    }
+
+    function dismissMigrationBanner() {
+      document.getElementById('migrationBanner').classList.add('hidden');
+    }
+
+    async function migrateLocalStorageToMongo() {
+      try {
+        showToast("Migrating local records to MongoDB Atlas...", "info");
+        let localTx = [], localBin = [], localStudents = [], budget = 0;
+
+        try {
+          const t = localStorage.getItem("MADDYS_LEDGER_PERMANENT_MASTER_STORE");
+          if (t) localTx = JSON.parse(t);
+        } catch (e) { }
+
+        try {
+          const b = localStorage.getItem("MADDYS_LEDGER_RECYCLE_BIN_STORE");
+          if (b) localBin = JSON.parse(b);
+        } catch (e) { }
+
+        try {
+          const s = localStorage.getItem("MADDYS_LEDGER_STUDENTS_STORE");
+          if (s) localStudents = JSON.parse(s);
+        } catch (e) { }
+
+        try {
+          budget = Number(localStorage.getItem("MADDYS_LEDGER_PER_HEAD_BUDGET_V1")) || 0;
+        } catch (e) { }
+
+        if (localTx.length === 0 && localStudents.length === 0) {
+          showToast("No offline records found in localStorage", "info");
+          dismissMigrationBanner();
+          return;
+        }
+
+        const payload = {
+          transactions: localTx,
+          recycleBin: localBin,
+          students: localStudents,
+          perHeadBudget: budget
+        };
+
+        const res = await fetch('/api/migrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message, "success");
+          dismissMigrationBanner();
+          await fetchAllCloudData();
+        } else {
+          showToast(data.error || "Migration failed", "error");
+        }
+      } catch (err) {
+        showToast("Network error during migration", "error");
+      }
+    }
+
+    // ================= STUDENT MANAGEMENT =================
+    function openStudentModal() {
+      renderStudentModalList();
+      document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('studentModal').classList.add('hidden');
+    }
+
+    function renderStudentModalList() {
+      document.getElementById('studentCountText').innerText = `${STUDENTS.length} Students Registered`;
+      const list = document.getElementById('studentListContainer');
+      if (STUDENTS.length === 0) {
+        list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No students registered yet. Add one above.</p>`;
+        return;
+      }
+
+      list.innerHTML = STUDENTS.map((s, i) => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-800">${i + 1}. ${escapeHtml(s.name)}</span>
+              <span class="text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Roll: ${escapeHtml(s.rollNumber)}</span>
+              ${s.phoneNumber ? `<span class="text-[10px] text-slate-500 font-mono flex items-center gap-1"><i class="fa-solid fa-phone text-[8.5px] text-slate-400"></i> ${escapeHtml(s.phoneNumber)}</span>` : ''}
+            </div>
+            ${s.initialPassword ? `<p class="text-[10px] text-slate-500 font-mono mt-1">Secret Code: <span class="text-slate-900 font-bold bg-slate-200 px-1.5 py-0.5 rounded select-all">${escapeHtml(s.initialPassword)}</span></p>` : ''}
+          </div>
+          <button onclick="deleteStudent('${s.id}', '${escapeHtml(s.name)}')" class="text-rose-500 hover:bg-rose-100 p-1.5 rounded-lg transition ml-2" title="Remove Student">
+            <i class="fa-solid fa-trash-can text-[11px]"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function addNewStudent() {
+      const nameInput = document.getElementById('newStudentName');
+      const rollInput = document.getElementById('newStudentRoll');
+      const passInput = document.getElementById('newStudentPassword');
+
+      const name = nameInput.value.trim();
+      const rollNumber = rollInput.value.trim();
+      const password = passInput.value.trim();
+
+      if (!name) {
+        showToast("Please enter a student name", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, rollNumber, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          STUDENTS.push(data.student);
+          STUDENTS.sort((a, b) => a.name.localeCompare(b.name));
+          nameInput.value = '';
+          rollInput.value = '';
+          passInput.value = '';
+          renderStudentModalList();
+          populateCustomStudentDropdowns();
+          renderAnalysis();
+          renderIncome();
+          showToast(`Student ${data.student.name} added!`, "success");
+        } else {
+          showToast(data.error || "Failed to add student", "error");
+        }
+      } catch (err) {
+        showToast("Network error adding student", "error");
+      }
+    }
+
+    async function deleteStudent(id, name) {
+      const confirmed = await showCustomConfirm("Delete Student", `Are you sure you want to remove "${name}"?`);
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            STUDENTS = STUDENTS.filter(s => s.id !== id);
+            renderStudentModalList();
+            populateCustomStudentDropdowns();
+            renderAnalysis();
+            renderIncome();
+            showToast("Student deleted", "info");
+          }
+        } catch (e) {
+          showToast("Failed to delete student", "error");
+        }
+      }
+    }
+
+    function populateCustomStudentDropdowns() {
+      const incomeMenu = document.getElementById("incomeStudentMenu");
+      let filterHtml = `<div onclick="selectIncomeStudentFilter('all', 'All Students')" class="px-3 py-2 hover:bg-slate-50 cursor-pointer font-bold text-college-600">All Students</div>`;
+      filterHtml += `<div onclick="selectIncomeStudentFilter('General', 'General')" class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-slate-700">General</div>`;
+      filterHtml += STUDENTS.map(d => `
+        <div onclick="selectIncomeStudentFilter('${escapeHtml(d.name)}', '${escapeHtml(d.name)}')" class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-slate-700">${escapeHtml(d.name)}</div>
+      `).join('');
+      incomeMenu.innerHTML = filterHtml;
+
+      const formMenu = document.getElementById("formStudentDropdownMenu");
+      let formHtml = `<div onclick="selectFormStudent('General')" class="px-3 py-2 hover:bg-college-50 hover:text-college-700 cursor-pointer text-slate-700 font-bold">General</div>`;
+      formHtml += STUDENTS.map(d => `
+        <div onclick="selectFormStudent('${escapeHtml(d.name)}')" class="px-3 py-2 hover:bg-college-50 hover:text-college-700 cursor-pointer text-slate-700">${escapeHtml(d.name)} (${escapeHtml(d.rollNumber)})</div>
+      `).join('');
+
+      if (STUDENTS.length === 0) {
+        formHtml += `<div class="px-3 py-2 text-xs text-slate-400 italic">Please add students from top menu</div>`;
+      }
+      formMenu.innerHTML = formHtml;
+      document.getElementById("studentCountLabel").innerText = `${STUDENTS.length} Students`;
+    }
+
+    // ================= TRANSACTION CRUD WITH MONGODB =================
+    async function toggleVerifyTransaction(id, event) {
+      if (event) event.stopPropagation();
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      try {
+        const res = await fetch(`/api/transactions/${id}/verify`, { method: 'PATCH' });
+        const data = await res.json();
+        if (res.ok) {
+          tx.isVerified = data.isVerified;
+          const targetCard = document.getElementById(`tx-card-${id}`);
+          if (targetCard) {
+            targetCard.classList.remove('verify-card-effect');
+            void targetCard.offsetWidth;
+            targetCard.classList.add('verify-card-effect');
+          }
+          refreshUI();
+          showToast(tx.isVerified ? "Entry Verified with Blue Seal! ✓" : "Verification removed", "success");
+        }
+      } catch (e) {
+        showToast("Error updating verification status", "error");
+      }
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById("editItemId").value;
+      const amount = parseFloat(document.getElementById("txAmount").value);
+      const mode = document.getElementById("txModeValue").value;
+      const date = document.getElementById("txDate").value;
+      const description = document.getElementById("txDescription").value.trim();
+      const remark = document.getElementById("txRemark").value.trim();
+
+      if (isNaN(amount) || amount <= 0) {
+        showToast("Please enter a valid amount", "error");
+        return;
+      }
+
+      let txPayload = {
+        type: currentModalType,
+        amount: amount,
+        mode: mode,
+        date: date,
+        description: description,
+        remark: remark || buildFormattedRemark('', '', ''),
+        receiptImage: currentReceiptBase64 || null
+      };
+
+      if (currentModalType === 'income') {
+        txPayload.student = document.getElementById("txStudentValue").value || 'General';
+      } else {
+        txPayload.whoGave = document.getElementById("txExpenseWhoGave").value.trim();
+      }
+
+      const saveBtn = document.getElementById("saveButton");
+      saveBtn.disabled = true;
+
+      try {
+        if (editId) {
+          const res = await fetch(`/api/transactions/${editId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(txPayload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            const idx = transactions.findIndex(t => t.id === editId);
+            if (idx !== -1) transactions[idx] = data.transaction;
+            showToast("Entry updated in MongoDB Atlas!", "success");
+          }
+        } else {
+          const res = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(txPayload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            transactions.unshift(data.transaction);
+            showToast("New entry logged to MongoDB Atlas!", "success");
+          }
+        }
+        refreshUI();
+        closeTransactionModal();
+      } catch (err) {
+        showToast("Network error saving transaction", "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function softDeleteTransaction(id) {
+      const target = transactions.find(t => t.id === id);
+      if (!target) return;
+      const confirmed = await showCustomConfirm("Move to Trash", `Move "${target.description || 'this entry'}" (₹${target.amount}) to Recycle Bin?`);
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (res.ok) {
+            transactions = transactions.filter(t => t.id !== id);
+            recycleBin.unshift(data.transaction);
+            refreshUI();
+            showToast("Moved to Recycle Bin", "info");
+          }
+        } catch (e) {
+          showToast("Failed to move to trash", "error");
+        }
+      }
+    }
+
+    async function restoreFromBin(id) {
+      try {
+        const res = await fetch(`/api/transactions/${id}/restore`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          recycleBin = recycleBin.filter(t => t.id !== id);
+          transactions.unshift(data.transaction);
+          refreshUI();
+          renderRecycleBinList();
+          showToast("Transaction restored to ledger!", "success");
+        }
+      } catch (e) {
+        showToast("Failed to restore transaction", "error");
+      }
+    }
+
+    async function permanentDeleteFromBin(id) {
+      const confirmed = await showCustomConfirm("Permanent Delete", "Delete this entry permanently from MongoDB Atlas? It cannot be recovered.");
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/transactions/${id}/permanent`, { method: 'DELETE' });
+          if (res.ok) {
+            recycleBin = recycleBin.filter(t => t.id !== id);
+            refreshUI();
+            renderRecycleBinList();
+            showToast("Permanently deleted", "info");
+          }
+        } catch (e) {
+          showToast("Failed to permanently delete", "error");
+        }
+      }
+    }
+
+    async function emptyRecycleBin() {
+      if (recycleBin.length === 0) return;
+      const confirmed = await showCustomConfirm("Empty Recycle Bin", "Permanently delete all items in trash?");
+      if (confirmed) {
+        try {
+          const res = await fetch('/api/transactions/recycle-bin/empty', { method: 'DELETE' });
+          if (res.ok) {
+            recycleBin = [];
+            refreshUI();
+            renderRecycleBinList();
+            showToast("Recycle bin emptied", "info");
+          }
+        } catch (e) {
+          showToast("Failed to empty trash", "error");
+        }
+      }
+    }
+
+    async function resetEntireDatabase() {
+      const confirmed = await showCustomConfirm(
+        "Factory Reset Cloud Database",
+        "Are you sure you want to permanently delete EVERYTHING in MongoDB Atlas? This will wipe all transactions, registered students, and settings. This cannot be undone."
+      );
+      if (confirmed) {
+        try {
+          const res = await fetch('/api/reset-database', { method: 'POST' });
+          if (res.ok) {
+            transactions = [];
+            recycleBin = [];
+            STUDENTS = [];
+            localStorage.clear();
+            showToast("Database completely reset!", "success");
+            setTimeout(() => window.location.reload(), 800);
+          }
+        } catch (e) {
+          showToast("Failed to reset database", "error");
+        }
+      }
+    }
+
+    // ================= BUDGET PER HEAD =================
+    let budgetSaveTimeout = null;
+    function handleBudgetInputChange(val) {
+      perHeadBudget = Math.max(0, Number(val) || 0);
+      renderStudentBudgetBreakdown();
+
+      // Debounce save to MongoDB
+      clearTimeout(budgetSaveTimeout);
+      budgetSaveTimeout = setTimeout(async () => {
+        try {
+          await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ perHeadBudget })
+          });
+        } catch (e) { }
+      }, 600);
+    }
+
+    function renderStudentBudgetBreakdown() {
+      const container = document.getElementById('studentBudgetBreakdown');
+      const summary = document.getElementById('budgetSummaryCards');
+      if (!container || !summary) return;
+
+      const studentAmounts = {};
+      STUDENTS.forEach(s => { studentAmounts[s.name] = 0; });
+      transactions.filter(t => t.type === 'income').forEach(t => {
+        const name = (t.student && t.student.trim()) ? t.student.trim() : 'General';
+        if (name !== 'General') studentAmounts[name] = (studentAmounts[name] || 0) + (Number(t.amount) || 0);
+      });
+
+      const students = Object.keys(studentAmounts).sort((a, b) => studentAmounts[b] - studentAmounts[a] || a.localeCompare(b));
+      const totalTarget = perHeadBudget * students.length;
+      const totalReceived = students.reduce((sum, name) => sum + studentAmounts[name], 0);
+      const remaining = Math.max(0, totalTarget - totalReceived);
+      const money = n => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const miniCard = (label, value, color) => `<div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 min-w-0"><div class="text-[9px] uppercase tracking-wide font-bold text-slate-500">${label}</div><div class="text-xs sm:text-sm font-extrabold ${color} mt-1 break-words">₹${money(value)}</div></div>`;
+      summary.innerHTML = miniCard('Total Budget', totalTarget, 'text-slate-900') + miniCard('Income Received', totalReceived, 'text-emerald-600') + miniCard('Budget Gap', remaining, 'text-rose-600');
+
+      if (!students.length) {
+        container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">Add students to compare per-head budget progress.</p>`;
+        return;
+      }
+      if (!perHeadBudget) {
+        container.innerHTML = `<div class="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 p-4 text-center"><i class="fa-solid fa-bullseye text-indigo-500 mb-2"></i><p class="text-xs font-bold text-slate-700">Set a budget per head to begin</p><p class="text-[10px] text-slate-500 mt-1">Each student's bar will compare received income with the target budget.</p></div>`;
+        return;
+      }
+
+      container.innerHTML = students.map((name, index) => {
+        const received = studentAmounts[name] || 0;
+        const progress = Math.min(100, (received / perHeadBudget) * 100);
+        const gap = Math.max(0, perHeadBudget - received);
+        const reached = received >= perHeadBudget;
+        return `<div class="rounded-xl border border-slate-100 bg-white p-3 space-y-2">
+          <div class="flex items-start justify-between gap-2"><div class="min-w-0"><div class="text-xs font-bold text-slate-800 truncate">${index + 1}. ${escapeHtml(name)}</div><div class="text-[10px] text-slate-500 mt-0.5">${progress.toFixed(1)}% of budget reached</div></div><span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${reached ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}">${reached ? 'Target reached' : `₹${money(gap)} left`}</span></div>
+          <div class="h-2.5 rounded-full bg-rose-100 overflow-hidden"><div class="h-full rounded-full ${reached ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-300" style="width:${progress}%"></div></div>
+          <div class="flex justify-between gap-2 text-[10px]"><span class="text-indigo-700 font-bold">Received: ₹${money(received)}</span><span class="text-slate-500">Target: ₹${money(perHeadBudget)}</span></div>
+        </div>`;
+      }).join('');
+    }
+
+    // ================= FILTERS & DROPDOWNS =================
+    function closeAllCustomDropdowns(event) {
+      ['expenseModeMenu', 'incomeStudentMenu', 'incomeModeMenu', 'formStudentDropdownMenu'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+      });
+    }
+
+    function toggleCustomDropdown(menuId) {
+      const target = document.getElementById(menuId);
+      const isHidden = target.classList.contains('hidden');
+      closeAllCustomDropdowns();
+      if (isHidden) target.classList.remove('hidden');
+    }
+
+    function selectExpenseModeFilter(mode, label) {
+      expenseModeFilterVal = mode;
+      document.getElementById("expenseModeLabel").innerText = label;
+      document.getElementById("expenseModeMenu").classList.add("hidden");
+      renderExpenses();
+    }
+
+    function selectIncomeModeFilter(mode, label) {
+      incomeModeFilterVal = mode;
+      document.getElementById("incomeModeLabel").innerText = label;
+      document.getElementById("incomeModeMenu").classList.add("hidden");
+      renderIncome();
+    }
+
+    function selectIncomeStudentFilter(student, label) {
+      incomeStudentFilterVal = student;
+      document.getElementById("incomeStudentLabel").innerText = label;
+      document.getElementById("incomeStudentMenu").classList.add("hidden");
+      renderIncome();
+    }
+
+    function selectFormStudent(student) {
+      document.getElementById("txStudentValue").value = student;
+      document.getElementById("formStudentSelectedText").innerText = student;
+      document.getElementById("formStudentDropdownMenu").classList.add("hidden");
+    }
+
+    function setFormModeSelector(mode) {
+      document.getElementById("txModeValue").value = mode;
+      const gpayBtn = document.getElementById("formModeBtnGpay");
+      const cashBtn = document.getElementById("formModeBtnCash");
+      if (mode === 'gpay') {
+        gpayBtn.className = "py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition bg-white text-blue-700 shadow-subtle";
+        cashBtn.className = "py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition text-slate-500 hover:text-slate-700";
+      } else {
+        cashBtn.className = "py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition bg-white text-emerald-700 shadow-subtle";
+        gpayBtn.className = "py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition text-slate-500 hover:text-slate-700";
+      }
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(el => {
+        el.classList.remove('text-college-600', 'font-bold');
+        el.classList.add('text-slate-400');
+      });
+
+      if (tab === 'expense') {
+        document.getElementById('expenseView').classList.remove('hidden');
+        document.getElementById('navExpense').classList.add('text-college-600', 'font-bold');
+        document.getElementById('navExpense').classList.remove('text-slate-400');
+      } else if (tab === 'income') {
+        document.getElementById('incomeView').classList.remove('hidden');
+        document.getElementById('navIncome').classList.add('text-college-600', 'font-bold');
+        document.getElementById('navIncome').classList.remove('text-slate-400');
+      } else if (tab === 'analysis') {
+        document.getElementById('analysisView').classList.remove('hidden');
+        document.getElementById('navAnalysis').classList.add('text-college-600', 'font-bold');
+        document.getElementById('navAnalysis').classList.remove('text-slate-400');
+        renderAnalysis();
+      }
+    }
+
+    function toggleExpenseViewMode() {
+      expenseViewMode = expenseViewMode === 'detailed' ? 'line' : 'detailed';
+      document.getElementById('expenseViewToggleText').innerText = expenseViewMode === 'detailed' ? 'Line View' : 'Card View';
+      document.getElementById('expenseViewIcon').className = expenseViewMode === 'detailed' ? 'fa-solid fa-list-ul text-college-600' : 'fa-solid fa-table-cells-large text-college-600';
+      renderExpenses();
+    }
+
+    function toggleIncomeViewMode() {
+      incomeViewMode = incomeViewMode === 'detailed' ? 'line' : 'detailed';
+      document.getElementById('incomeViewToggleText').innerText = incomeViewMode === 'detailed' ? 'Line View' : 'Card View';
+      document.getElementById('incomeViewIcon').className = incomeViewMode === 'detailed' ? 'fa-solid fa-list-ul text-college-600' : 'fa-solid fa-table-cells-large text-college-600';
+      renderIncome();
+    }
+
+    function getFinancialMetrics() {
+      const incomes = transactions.filter(t => t.type === 'income').sort(sortRecentFirst);
+      const expenses = transactions.filter(t => t.type === 'expense').sort(sortRecentFirst);
+
+      const incomeGpay = incomes.filter(t => t.mode === 'gpay').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const incomeCash = incomes.filter(t => t.mode === 'cash').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalIncome = incomeGpay + incomeCash;
+
+      const expenseGpay = expenses.filter(t => t.mode === 'gpay').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const expenseCash = expenses.filter(t => t.mode === 'cash').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalExpense = expenseGpay + expenseCash;
+
+      return {
+        incomes, expenses, incomeGpay, incomeCash, totalIncome,
+        expenseGpay, expenseCash, totalExpense,
+        gpayBal: incomeGpay - expenseGpay, cashBal: incomeCash - expenseCash, netBal: totalIncome - totalExpense
+      };
+    }
+
+    function updateQuickMetrics() {
+      const m = getFinancialMetrics();
+      document.getElementById('quickTotalIncome').innerText = m.totalIncome.toLocaleString('en-IN');
+      document.getElementById('quickTotalExpense').innerText = m.totalExpense.toLocaleString('en-IN');
+      document.getElementById('quickNetBalance').innerText = m.netBal.toLocaleString('en-IN');
+      document.getElementById('quickNetBalance').className = `text-base sm:text-xl font-extrabold font-display ${m.netBal >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+    }
+
+    function buildFormattedRemark(fromVal, toVal, upiVal) {
+      const clean = (v) => (v && v.trim().length > 0) ? v.trim() : '-';
+      return `From : ${clean(fromVal)}\nTo : ${clean(toVal)}\nUpi transaction id : ${clean(upiVal)}`;
+    }
+
+    function resetDefaultRemarkTemplate() {
+      document.getElementById("txRemark").value = buildFormattedRemark('', '', '');
+    }
+
+    // ================= OCR & BILL SCREENSHOT READER =================
+    function extractPaymentDetailsFromText(rawText) {
+      let fromResult = '', toResult = '', upiResult = '';
+      const text = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const upiPatterns = [
+        /(?:UPI\s*(?:Transaction\s*ID|Ref(?:\s*No)?|Reference(?:\s*No)?|Txn\s*ID)|UTR(?:\s*No)?|Google\s*Transaction\s*ID)[\s:\-#]*([A-Za-z0-9]{10,24})/i,
+        /\b(?:Ref|UTR|Txn)\s*[:#]?\s*(\d{12})\b/i, /\b(\d{12})\b/
+      ];
+      for (const pattern of upiPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) { upiResult = match[1].trim(); break; }
+      }
+      const toPatterns = [/(?:Paid\s*to|Payment\s*to|Sent\s*to|Transfer(?:red)?\s*to|To\s*[:\-])\s*([^\n\r,]+)/i];
+      for (const pattern of toPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          let candidate = match[1].replace(/[₹\d\.\:\-]/g, '').trim();
+          if (candidate.length > 2 && !/^(bank|account|upi|completed|successful|rs|inr|payment|money)/i.test(candidate)) { toResult = candidate; break; }
+        }
+      }
+      if (!toResult) {
+        const vpaMatch = text.match(/([a-zA-Z0-9.\-_]{2,25}@[a-zA-Z]{2,15})/);
+        if (vpaMatch) toResult = vpaMatch[1];
+      }
+      const fromPatterns = [/(?:Debited\s*from|Paid\s*from|Sent\s*from|Transfer(?:red)?\s*from|Paid\s*by|From\s*[:\-])\s*([^\n\r,]+)/i];
+      for (const pattern of fromPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          let candidate = match[1].replace(/[:\-]/g, '').trim();
+          if (candidate.length > 2) { fromResult = candidate; break; }
+        }
+      }
+      return { fromResult, toResult, upiResult };
+    }
+
+    function preprocessImageForOCR(imageElement) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = imageElement.width; canvas.height = imageElement.height;
+      ctx.drawImage(imageElement, 0, 0);
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          const avg = (imgData.data[i] * 0.299 + imgData.data[i + 1] * 0.587 + imgData.data[i + 2] * 0.114);
+          const contrast = (avg > 140) ? 255 : (avg < 80 ? 0 : avg);
+          imgData.data[i] = imgData.data[i + 1] = imgData.data[i + 2] = contrast;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return canvas.toDataURL('image/png');
+      } catch (e) { return canvas.toDataURL('image/jpeg', 0.9); }
+    }
+
+    function handleReceiptFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement('canvas');
+          let width = img.width, height = img.height, maxDim = 1200;
+          if (width > height && width > maxDim) { height = Math.round((height * maxDim) / width); width = maxDim; }
+          else if (height > maxDim) { width = Math.round((width * maxDim) / height); height = maxDim; }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+          currentReceiptBase64 = canvas.toDataURL('image/jpeg', 0.85);
+          showReceiptPreviewInForm(currentReceiptBase64);
+          processImageOCR(img);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function processImageOCR(imageElement) {
+      const ocrBadge = document.getElementById("ocrScanningBadge");
+      const remarkInput = document.getElementById("txRemark");
+      ocrBadge.classList.remove("hidden"); ocrBadge.classList.add("inline-flex");
+      showToast("Reading payment screenshot...", "info");
+      try {
+        const processedUri = preprocessImageForOCR(imageElement);
+        if (window.Tesseract) {
+          const result = await Tesseract.recognize(processedUri, 'eng', { logger: m => { } });
+          const rawText = result?.data?.text || '';
+          if (rawText.trim().length > 0) {
+            const { fromResult, toResult, upiResult } = extractPaymentDetailsFromText(rawText);
+            remarkInput.value = buildFormattedRemark(fromResult, toResult, upiResult);
+            remarkInput.classList.add("ring-2", "ring-emerald-500", "bg-emerald-50/50");
+            setTimeout(() => { remarkInput.classList.remove("ring-2", "ring-emerald-500", "bg-emerald-50/50"); }, 1200);
+            showToast("Details auto-filled in Remark!", "success");
+          } else resetDefaultRemarkTemplate();
+        } else resetDefaultRemarkTemplate();
+      } catch (err) { resetDefaultRemarkTemplate(); }
+      finally { ocrBadge.classList.add("hidden"); ocrBadge.classList.remove("inline-flex"); }
+    }
+
+    function showReceiptPreviewInForm(base64) {
+      const box = document.getElementById("receiptPreviewBox");
+      const thumb = document.getElementById("receiptThumbImg");
+      const labelText = document.getElementById("uploadStatusText");
+      if (base64) {
+        thumb.src = base64; box.classList.remove("hidden"); labelText.innerText = "Screenshot Attached";
+      } else {
+        thumb.src = ""; box.classList.add("hidden"); labelText.innerText = "Attach Bill Screenshot";
+      }
+    }
+
+    function removeSelectedReceipt() {
+      currentReceiptBase64 = null;
+      document.getElementById("receiptFileInput").value = "";
+      showReceiptPreviewInForm(null);
+    }
+
+    function viewReceiptModal(base64, title) {
+      document.getElementById("receiptViewerImg").src = base64;
+      document.getElementById("receiptViewerTitle").innerText = title ? `Bill: ${title}` : "Attached Receipt";
+      document.getElementById("receiptViewerModal").classList.remove("hidden");
+    }
+
+    function closeReceiptViewer() { document.getElementById("receiptViewerModal").classList.add("hidden"); }
+
+    // ================= THERMAL RECEIPT SLIP =================
+    function openThermalSlipModal(id) {
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+      currentThermalSlipTx = tx;
+      renderThermalSlip(tx);
+      document.getElementById("thermalReceiptModal").classList.remove("hidden");
+    }
+
+    function closeThermalSlipModal() { document.getElementById("thermalReceiptModal").classList.add("hidden"); }
+
+    function setSlipPaperWidth(width) {
+      currentPaperWidth = width;
+      const container = document.getElementById("thermalSlipContainer");
+      if (width === '58mm') {
+        container.className = "slip-58mm bg-white text-black font-receipt p-3 shadow-xl border border-slate-300 select-none";
+        document.getElementById("btnWidth58").className = "px-2.5 py-1 rounded-lg bg-college-600 text-white transition";
+        document.getElementById("btnWidth80").className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition";
+      } else {
+        container.className = "slip-80mm bg-white text-black font-receipt p-4 shadow-xl border border-slate-300 select-none";
+        document.getElementById("btnWidth80").className = "px-2.5 py-1 rounded-lg bg-college-600 text-white transition";
+        document.getElementById("btnWidth58").className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition";
+      }
+      if (currentThermalSlipTx) renderThermalSlip(currentThermalSlipTx);
+    }
+
+    function renderThermalSlip(tx) {
+      const container = document.getElementById("thermalSlipContainer");
+      const isIncome = tx.type === 'income';
+      const typeLabel = isIncome ? "OFFICIAL CASH RECEIPT" : "TRANSACTION SLIP";
+      const modeLabel = (tx.mode || 'CASH').toUpperCase();
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      container.innerHTML = `
+        <div style="text-align: center; margin-bottom: 6px;">
+          <div style="font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;">MADDY'S LEDGER</div>
+          <div style="font-size: 10px; font-weight: 600;">CLASS TRIP FINANCE</div>
+          <div style="font-size: 9px; margin-top: 2px;">*** ${typeLabel} ***</div>
+        </div>
+        <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin: 6px 0; font-size: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>DATE: ${tx.date}</span><span>TIME: ${timestamp}</span></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 2px;"><span>MODE: [ ${modeLabel} ]</span><span>${tx.isVerified ? '[VERIFIED]' : ''}</span></div>
+        </div>
+        <div style="margin: 6px 0;">
+          <div style="font-size: 9px; text-transform: uppercase; color: #333;">DESCRIPTION:</div>
+          <div style="font-weight: 700; font-size: 11.5px; margin-top: 1px;">${escapeHtml(tx.description || 'General Transaction')}</div>
+        </div>
+        <div style="margin: 5px 0; font-size: 10px; line-height: 1.35;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 9px;">${isIncome ? 'STUDENT:' : 'PAID TO:'}</span>
+            <span style="font-weight: 700; text-align: right;">${escapeHtml(isIncome ? tx.student : tx.whoGave || '-')}</span>
+          </div>
+          ${tx.remark ? `<div style="margin-top: 4px; padding-top: 3px; border-top: 1px dotted #888; font-size: 8.5px; font-family: monospace; white-space: pre-line;">${escapeHtml(tx.remark)}</div>` : ''}
+        </div>
+        <div style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 0; margin: 6px 0; display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-weight: 700; font-size: 11.5px;">NET AMOUNT:</span>
+          <span style="font-weight: 700; font-size: 15px;">₹${Number(tx.amount).toLocaleString('en-IN')}</span>
+        </div>
+        <div style="text-align: center; margin-top: 6px; font-size: 8px; color: #555;">powered by maddiverse</div>
+      `;
+    }
+
+    function downloadSlipAsImage() {
+      const slipEl = document.getElementById("thermalSlipContainer");
+      if (!slipEl || !currentThermalSlipTx) return;
+      showToast("Generating image slip...", "info");
+      html2canvas(slipEl, { scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false }).then(canvas => {
+        const link = document.createElement("a");
+        const cleanTitle = (currentThermalSlipTx.description || 'Slip').replace(/[^a-zA-Z0-9]/g, '_');
+        link.download = `ClassTrip_Thermal_${currentPaperWidth}_${cleanTitle}_${currentThermalSlipTx.date}.png`;
+        link.href = canvas.toDataURL("image/png"); link.click();
+        showToast("POS Thermal Slip saved as PNG Image!", "success");
+      });
+    }
+
+    function printThermalSlipDirect() {
+      if (!currentThermalSlipTx) return;
+      const printContainer = document.getElementById("printArea");
+      const slipHtml = document.getElementById("thermalSlipContainer").innerHTML;
+      const widthStyle = currentPaperWidth === '58mm' ? 'max-width: 58mm;' : 'max-width: 80mm;';
+      printContainer.innerHTML = `<div style="font-family: 'Space Mono', monospace; color: black; ${widthStyle} margin: 0; padding: 2px;">${slipHtml}</div>`;
+      closeThermalSlipModal();
+      setTimeout(() => { window.print(); }, 200);
+    }
+
+    // ================= RENDER EXPENSES =================
+    function renderExpenses() {
+      const search = document.getElementById("expenseSearch").value.toLowerCase().trim();
+      const container = document.getElementById("expenseListContainer");
+      const filtered = transactions.filter(t => {
+        if (t.type !== 'expense') return false;
+        if (expenseModeFilterVal !== 'all' && t.mode !== expenseModeFilterVal) return false;
+        if (search) {
+          const matchDesc = (t.description || '').toLowerCase().includes(search);
+          const matchRemark = (t.remark || '').toLowerCase().includes(search);
+          const matchWho = (t.whoGave || '').toLowerCase().includes(search);
+          if (!matchDesc && !matchRemark && !matchWho) return false;
+        }
+        return true;
+      }).sort(sortRecentFirst);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid fa-receipt text-slate-300 text-2xl mb-1.5"></i>
+            <p class="text-xs font-semibold text-slate-600">No expense records found</p>
+            <p class="text-[10px] text-slate-400 font-medium">Click New Entry to log an expenditure</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (expenseViewMode === 'line') {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-subtle overflow-hidden">
+            <div class="grid grid-cols-12 gap-1 px-3.5 py-2 bg-slate-50 border-b border-slate-200/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">
+              <span class="col-span-2">Date</span><span class="col-span-4 sm:col-span-3">Paid To</span>
+              <span class="col-span-3 sm:col-span-4 truncate">Description</span><span class="col-span-3 text-right">Amount</span>
+            </div>
+            <div class="divide-y divide-slate-100">
+              ${filtered.map(t => `
+                <div onclick="editTransaction('${t.id}')" class="grid grid-cols-12 gap-1 px-3.5 py-2.5 hover:bg-slate-50 transition items-center text-xs cursor-pointer select-none ${t.isVerified ? 'bg-sky-50/20' : ''}">
+                  <div class="col-span-2 flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] font-semibold text-slate-500 truncate">${t.date}</span>
+                    <span class="text-[8.5px] font-extrabold uppercase tracking-tight ${t.mode === 'gpay' ? 'text-blue-600' : 'text-emerald-600'} font-mono">${t.mode}</span>
+                  </div>
+                  <div class="col-span-4 sm:col-span-3 font-bold text-slate-800 truncate text-[11px]">${escapeHtml(t.whoGave || 'N/A')}</div>
+                  <div class="col-span-3 sm:col-span-4 text-slate-500 truncate text-[11px] font-medium">${escapeHtml(t.description || '-')}</div>
+                  <div class="col-span-3 text-right font-extrabold text-rose-600 font-display text-xs truncate flex items-center justify-end gap-1">
+                    <span>-₹${Number(t.amount).toLocaleString('en-IN')}</span>${t.isVerified ? getVerifiedBadgeSvg("w-3.5 h-3.5") : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const verifiedCardStyles = t.isVerified ? 'bg-sky-50/40 border-sky-200/90 ring-1 ring-sky-300/30' : 'bg-white border-slate-200/80';
+        return `
+          <div id="tx-card-${t.id}" class="relative ${verifiedCardStyles} p-3.5 rounded-2xl shadow-subtle hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 overflow-hidden">
+            ${t.isVerified ? `<div class="absolute top-2.5 right-2.5 z-10 badge-pop-anim" title="Verified Authentic Entry">${getVerifiedBadgeSvg("w-4 h-4")}</div>` : ''}
+            <div class="flex items-start gap-2.5 min-w-0 flex-1 pr-6 sm:pr-0">
+              <div class="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5 shadow-xs"><i class="fa-solid fa-arrow-up-right text-xs"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(t.description || 'Expense Entry')}</span>
+                  <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${t.mode === 'gpay' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} font-mono">${t.mode}</span>
+                  <span class="text-[10px] font-medium text-slate-400">${t.date}</span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate"><span class="font-semibold text-slate-700">Paid to:</span> ${escapeHtml(t.whoGave || 'N/A')}</p>
+                ${t.remark ? `<div class="text-[9.5px] font-mono text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-2 mt-1.5 multiline-remark">${escapeHtml(t.remark)}</div>` : ''}
+              </div>
+            </div>
+            <div class="flex flex-col sm:items-end justify-between sm:justify-end gap-1.5 border-t sm:border-t-0 pt-1.5 sm:pt-0 border-slate-100 shrink-0">
+              <div class="text-left sm:text-right"><div class="text-sm font-extrabold text-rose-600 font-display">- ₹${Number(t.amount).toLocaleString('en-IN')}</div></div>
+              <div class="flex items-center gap-1 flex-wrap">
+                <button onclick="openThermalSlipModal('${t.id}')" class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 text-[10.5px] font-semibold active:scale-95"><i class="fa-solid fa-receipt text-slate-600 text-[10px]"></i> <span>Slip</span></button>
+                ${t.receiptImage ? `<button onclick="viewReceiptModal('${t.receiptImage}', '${escapeHtml(t.description || 'Bill')}')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-college-600 transition flex items-center gap-1 text-[10.5px] font-semibold active:scale-95"><i class="fa-solid fa-eye text-[10px]"></i> <span>Bill</span></button>` : ''}
+                <button onclick="editTransaction('${t.id}')" class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center justify-center text-[10px] active:scale-95"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="softDeleteTransaction('${t.id}')" class="w-6 h-6 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center justify-center text-[10px] active:scale-95"><i class="fa-solid fa-trash-can"></i></button>
+                <button onclick="toggleVerifyTransaction('${t.id}', event)" class="px-2.5 py-1 rounded-xl transition flex items-center gap-1 text-[10.5px] font-bold active:scale-95 ${t.isVerified ? 'bg-sky-100/90 text-sky-700 border border-sky-300/60 hover:bg-sky-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}">
+                  ${t.isVerified ? getVerifiedBadgeSvg("w-3 h-3") : '<i class="fa-solid fa-circle-check text-[10px] text-slate-400"></i>'}<span>${t.isVerified ? 'Verified' : 'Verify'}</span>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ================= RENDER INCOME =================
+    function renderIncome() {
+      const search = document.getElementById("incomeSearch").value.toLowerCase().trim();
+      const container = document.getElementById("incomeListContainer");
+      const filtered = transactions.filter(t => {
+        if (t.type !== 'income') return false;
+        if (incomeModeFilterVal !== 'all' && t.mode !== incomeModeFilterVal) return false;
+        if (incomeStudentFilterVal !== 'all' && (t.student || 'General') !== incomeStudentFilterVal) return false;
+        if (search) {
+          const matchStudent = (t.student || '').toLowerCase().includes(search);
+          const matchDesc = (t.description || '').toLowerCase().includes(search);
+          const matchRemark = (t.remark || '').toLowerCase().includes(search);
+          if (!matchStudent && !matchDesc && !matchRemark) return false;
+        }
+        return true;
+      }).sort(sortRecentFirst);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid fa-hand-holding-dollar text-slate-300 text-2xl mb-1.5"></i>
+            <p class="text-xs font-semibold text-slate-600">No income records found</p>
+            <p class="text-[10px] text-slate-400 font-medium">Click New Entry to record trip collections</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (incomeViewMode === 'line') {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-subtle overflow-hidden">
+            <div class="grid grid-cols-12 gap-1 px-3.5 py-2 bg-slate-50 border-b border-slate-200/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">
+              <span class="col-span-2">Date</span><span class="col-span-4 sm:col-span-3">Student</span>
+              <span class="col-span-3 sm:col-span-4 truncate">Description</span><span class="col-span-3 text-right">Amount</span>
+            </div>
+            <div class="divide-y divide-slate-100">
+              ${filtered.map(t => `
+                <div onclick="editTransaction('${t.id}')" class="grid grid-cols-12 gap-1 px-3.5 py-2.5 hover:bg-slate-50 transition items-center text-xs cursor-pointer select-none ${t.isVerified ? 'bg-sky-50/20' : ''}">
+                  <div class="col-span-2 flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] font-semibold text-slate-500 truncate">${t.date}</span>
+                    <span class="text-[8.5px] font-extrabold uppercase tracking-tight ${t.mode === 'gpay' ? 'text-blue-600' : 'text-emerald-600'} font-mono">${t.mode}</span>
+                  </div>
+                  <div class="col-span-4 sm:col-span-3 font-bold text-slate-800 truncate text-[11px]">${escapeHtml(t.student || 'General')}</div>
+                  <div class="col-span-3 sm:col-span-4 text-slate-500 truncate text-[11px] font-medium">${escapeHtml(t.description || '-')}</div>
+                  <div class="col-span-3 text-right font-extrabold text-emerald-600 font-display text-xs truncate flex items-center justify-end gap-1">
+                    <span>+₹${Number(t.amount).toLocaleString('en-IN')}</span>${t.isVerified ? getVerifiedBadgeSvg("w-3.5 h-3.5") : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const verifiedCardStyles = t.isVerified ? 'bg-sky-50/40 border-sky-200/90 ring-1 ring-sky-300/30' : 'bg-white border-slate-200/80';
+        return `
+          <div id="tx-card-${t.id}" class="relative ${verifiedCardStyles} p-3.5 rounded-2xl shadow-subtle hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 overflow-hidden">
+            ${t.isVerified ? `<div class="absolute top-2.5 right-2.5 z-10 badge-pop-anim" title="Verified Authentic Entry">${getVerifiedBadgeSvg("w-4 h-4")}</div>` : ''}
+            <div class="flex items-start gap-2.5 min-w-0 flex-1 pr-6 sm:pr-0">
+              <div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 shadow-xs"><i class="fa-solid fa-arrow-down-left text-xs"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(t.description || 'Income Entry')}</span>
+                  <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${t.mode === 'gpay' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} font-mono">${t.mode}</span>
+                  <span class="text-[10px] font-medium text-slate-400">${t.date}</span>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-2.5">
+                  <span><strong class="text-slate-700 font-semibold">Student:</strong> <span class="text-indigo-700 font-bold">${escapeHtml(t.student || 'General')}</span></span>
+                </div>
+                ${t.remark ? `<div class="text-[9.5px] font-mono text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-2 mt-1.5 multiline-remark">${escapeHtml(t.remark)}</div>` : ''}
+              </div>
+            </div>
+            <div class="flex flex-col sm:items-end justify-between sm:justify-end gap-1.5 border-t sm:border-t-0 pt-1.5 sm:pt-0 border-slate-100 shrink-0">
+              <div class="text-left sm:text-right"><div class="text-sm font-extrabold text-emerald-600 font-display">+ ₹${Number(t.amount).toLocaleString('en-IN')}</div></div>
+              <div class="flex items-center gap-1 flex-wrap">
+                <button onclick="openThermalSlipModal('${t.id}')" class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 text-[10.5px] font-semibold active:scale-95"><i class="fa-solid fa-receipt text-slate-600 text-[10px]"></i> <span>Slip</span></button>
+                ${t.receiptImage ? `<button onclick="viewReceiptModal('${t.receiptImage}', '${escapeHtml(t.description || 'Receipt')}')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-college-600 transition flex items-center gap-1 text-[10.5px] font-semibold active:scale-95"><i class="fa-solid fa-eye text-[10px]"></i> <span>Receipt</span></button>` : ''}
+                <button onclick="editTransaction('${t.id}')" class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center justify-center text-[10px] active:scale-95"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="softDeleteTransaction('${t.id}')" class="w-6 h-6 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center justify-center text-[10px] active:scale-95"><i class="fa-solid fa-trash-can"></i></button>
+                <button onclick="toggleVerifyTransaction('${t.id}', event)" class="px-2.5 py-1 rounded-xl transition flex items-center gap-1 text-[10.5px] font-bold active:scale-95 ${t.isVerified ? 'bg-sky-100/90 text-sky-700 border border-sky-300/60 hover:bg-sky-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}">
+                  ${t.isVerified ? getVerifiedBadgeSvg("w-3 h-3") : '<i class="fa-solid fa-circle-check text-[10px] text-slate-400"></i>'}<span>${t.isVerified ? 'Verified' : 'Verify'}</span>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ================= RENDER ANALYSIS =================
+    function renderAnalysis() {
+      const m = getFinancialMetrics();
+      document.getElementById('analysisGpayIn').innerText = m.incomeGpay.toLocaleString('en-IN');
+      document.getElementById('analysisGpayOut').innerText = m.expenseGpay.toLocaleString('en-IN');
+      document.getElementById('analysisGpayBal').innerText = m.gpayBal.toLocaleString('en-IN');
+      document.getElementById('analysisCashIn').innerText = m.incomeCash.toLocaleString('en-IN');
+      document.getElementById('analysisCashOut').innerText = m.expenseCash.toLocaleString('en-IN');
+      document.getElementById('analysisCashBal').innerText = m.cashBal.toLocaleString('en-IN');
+
+      const container = document.getElementById('studentBreakdownContainer');
+      const stdMap = { 'General': 0 };
+      STUDENTS.forEach(s => stdMap[s.name] = 0);
+
+      transactions.filter(t => t.type === 'income').forEach(t => {
+        const key = (t.student && t.student.trim() !== '') ? t.student : 'General';
+        if (stdMap[key] !== undefined) stdMap[key] += Number(t.amount || 0);
+        else stdMap[key] = Number(t.amount || 0);
+      });
+
+      const sortedStudents = Object.keys(stdMap).sort((a, b) => stdMap[b] - stdMap[a]);
+
+      if (sortedStudents.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No student data available.</p>`;
+        return;
+      }
+
+      container.innerHTML = sortedStudents.map((std, i) => {
+        const amount = stdMap[std] || 0;
+        const percentage = m.totalIncome > 0 ? ((amount / m.totalIncome) * 100).toFixed(1) : 0;
+        return `
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs font-semibold">
+              <span class="text-slate-800">${i + 1}. ${escapeHtml(std)}</span>
+              <span class="text-slate-900 font-bold font-display">₹${amount.toLocaleString('en-IN')} <span class="text-[10px] text-slate-400 font-medium font-sans">(${percentage}%)</span></span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div class="bg-gradient-to-r from-college-600 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('studentCountLabel').innerText = `${sortedStudents.filter(name => name !== 'General').length} Students`;
+      renderStudentBudgetBreakdown();
+    }
+
+    // ================= RECYCLE BIN MODAL =================
+    function updateRecycleBinBadge() {
+      const badge = document.getElementById("binCountBadge");
+      if (recycleBin.length > 0) {
+        badge.innerText = recycleBin.length;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    function openRecycleBinModal() {
+      renderRecycleBinList();
+      document.getElementById("recycleBinModal").classList.remove("hidden");
+    }
+
+    function closeRecycleBinModal() {
+      document.getElementById("recycleBinModal").classList.add("hidden");
+    }
+
+    function renderRecycleBinList() {
+      const container = document.getElementById("recycleBinList");
+      if (recycleBin.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-trash-can text-2xl mb-1.5 text-slate-300"></i><p class="text-xs font-semibold">Recycle Bin is empty</p></div>`;
+        return;
+      }
+      container.innerHTML = recycleBin.map(t => `
+        <div class="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2 text-xs">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-900">${escapeHtml(t.description || 'Transaction')}</span>
+              <span class="text-[9px] font-bold uppercase px-1 py-0.5 rounded ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} font-mono">${t.type}</span>
+              <span class="font-extrabold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'} font-display">₹${Number(t.amount).toLocaleString('en-IN')}</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-0.5">Logged: ${t.date}</p>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="restoreFromBin('${t.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-[11px] flex items-center gap-1"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+            <button onclick="permanentDeleteFromBin('${t.id}')" class="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ================= WHATSAPP SUMMARY =================
+    function generateWhatsAppSummaryText() {
+      const m = getFinancialMetrics();
+      const today = getTodayFormatted();
+      const topExpenses = [...m.expenses].sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 5);
+      let text = `🚌 *CLASS TRIP FINANCE SUMMARY*\n`;
+      text += `📅 *Date:* ${today}\n\n`;
+      text += `💰 *FINANCIAL OVERVIEW:*\n`;
+      text += `• Total Income: ₹${m.totalIncome.toLocaleString('en-IN')}\n`;
+      text += `• Total Expense: ₹${m.totalExpense.toLocaleString('en-IN')}\n`;
+      text += `• *Net Balance: ₹${m.netBal.toLocaleString('en-IN')}*\n\n`;
+      text += `💳 *ACCOUNT BALANCES:*\n`;
+      text += `• Google Pay: ₹${m.gpayBal.toLocaleString('en-IN')} (In: ₹${m.incomeGpay.toLocaleString('en-IN')} | Out: ₹${m.expenseGpay.toLocaleString('en-IN')})\n`;
+      text += `• Physical Cash: ₹${m.cashBal.toLocaleString('en-IN')} (In: ₹${m.incomeCash.toLocaleString('en-IN')} | Out: ₹${m.expenseCash.toLocaleString('en-IN')})\n\n`;
+      if (topExpenses.length > 0) {
+        text += `🔥 *TOP EXPENDITURES:*\n`;
+        topExpenses.forEach((t, i) => { text += `${i + 1}. ${t.description || 'Expense'} - ₹${Number(t.amount).toLocaleString('en-IN')} (${t.mode.toUpperCase()})\n`; });
+        text += `\n`;
+      }
+      text += `⚡ _Generated via Class Trip Ledger (MongoDB Atlas)_`;
+      return text;
+    }
+
+    function openWhatsAppModal() {
+      document.getElementById("whatsappTextPreview").value = generateWhatsAppSummaryText();
+      document.getElementById("copyBtnText").innerText = "Copy Text";
+      document.getElementById("whatsappModal").classList.remove("hidden");
+    }
+    function closeWhatsAppModal() { document.getElementById("whatsappModal").classList.add("hidden"); }
+    function copyWhatsAppSummary() {
+      const text = document.getElementById("whatsappTextPreview").value;
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById("copyBtnText").innerText = "Copied!"; showToast("Summary copied to clipboard!", "success");
+      });
+    }
+    function launchWhatsAppDirect() {
+      const text = document.getElementById("whatsappTextPreview").value;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    // ================= TRANSACTION MODAL HELPERS =================
+    function openTransactionModal(editId = null) {
+      document.getElementById("txModal").classList.remove("hidden");
+      const form = document.getElementById("txForm"); form.reset();
+      document.getElementById("editItemId").value = "";
+      currentReceiptBase64 = null; showReceiptPreviewInForm(null);
+
+      if (editId) {
+        const item = transactions.find(t => t.id === editId);
+        if (item) {
+          document.getElementById("editItemId").value = item.id;
+          document.getElementById("modalTitle").innerText = "Edit Entry";
+          document.getElementById("saveButton").innerText = "Update Entry";
+          setModalType(item.type);
+          document.getElementById("txAmount").value = item.amount;
+          setFormModeSelector(item.mode || 'gpay');
+          document.getElementById("txDate").value = item.date;
+          document.getElementById("txDescription").value = item.description || "";
+          document.getElementById("txRemark").value = item.remark || buildFormattedRemark('', '', '');
+          if (item.receiptImage) { currentReceiptBase64 = item.receiptImage; showReceiptPreviewInForm(item.receiptImage); }
+          if (item.type === 'income') {
+            selectFormStudent(item.student || 'General');
+          } else {
+            document.getElementById("txExpenseWhoGave").value = item.whoGave || "";
+          }
+          return;
+        }
+      }
+      document.getElementById("modalTitle").innerText = "Add New Entry";
+      document.getElementById("saveButton").innerText = "Save Entry";
+      setModalType(activeTab === 'income' ? 'income' : 'expense');
+      setFormModeSelector('gpay');
+      selectFormStudent('General');
+      initDefaultDate(); resetDefaultRemarkTemplate();
+    }
+    function closeTransactionModal() { document.getElementById("txModal").classList.add("hidden"); }
+
+    function setModalType(type) {
+      currentModalType = type;
+      const tabIncome = document.getElementById("modalTabIncome");
+      const tabExpense = document.getElementById("modalTabExpense");
+      const incomeFields = document.getElementById("incomeFields");
+      const expenseFields = document.getElementById("expenseFields");
+      const whoGaveExp = document.getElementById("txExpenseWhoGave");
+
+      if (type === 'income') {
+        tabIncome.className = "py-2 rounded-xl transition-all bg-white text-emerald-700 shadow-subtle font-bold";
+        tabExpense.className = "py-2 rounded-xl transition-all text-slate-500 hover:text-slate-700 font-semibold";
+        incomeFields.classList.remove("hidden"); expenseFields.classList.add("hidden");
+        whoGaveExp.required = false;
+      } else {
+        tabExpense.className = "py-2 rounded-xl transition-all bg-white text-rose-700 shadow-subtle font-bold";
+        tabIncome.className = "py-2 rounded-xl transition-all text-slate-500 hover:text-slate-700 font-semibold";
+        expenseFields.classList.remove("hidden"); incomeFields.classList.add("hidden");
+        whoGaveExp.required = true;
+      }
+    }
+
+    function editTransaction(id) { openTransactionModal(id); }
+
+    function getTodayFormatted() { return formatDateDDMMYY(new Date()); }
+    function formatDateDDMMYY(d) {
+      const day = String(d.getDate()).padStart(2, '0'), month = String(d.getMonth() + 1).padStart(2, '0'), year = String(d.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    }
+    function initDefaultDate() { document.getElementById("txDate").value = getTodayFormatted(); }
+
+    function openCalendarPicker(targetInputId) {
+      calTargetInputId = targetInputId; calCurrentDate = new Date(); renderCustomCalendar();
+      document.getElementById("calendarModal").classList.remove("hidden");
+    }
+    function closeCalendarPicker() { document.getElementById("calendarModal").classList.add("hidden"); }
+
+    function renderCustomCalendar() {
+      const monthYearTitle = document.getElementById("calMonthYearTitle");
+      const daysGrid = document.getElementById("calDaysGrid");
+      const year = calCurrentDate.getFullYear(), month = calCurrentDate.getMonth();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      monthYearTitle.innerText = `${monthNames[month]} ${year}`;
+      const firstDay = new Date(year, month, 1).getDay(), totalDays = new Date(year, month + 1, 0).getDate();
+      let gridHtml = '';
+      for (let i = 0; i < firstDay; i++) gridHtml += `<div></div>`;
+      const today = new Date();
+      for (let d = 1; d <= totalDays; d++) {
+        const isToday = (today.getDate() === d && today.getMonth() === month && today.getFullYear() === year);
+        gridHtml += `<button type="button" onclick="selectCalendarDate(${d}, ${month}, ${year})" class="py-1.5 rounded-xl font-semibold hover:bg-college-100 hover:text-college-700 transition ${isToday ? 'bg-college-600 text-white font-bold' : 'text-slate-700'}">${d}</button>`;
+      }
+      daysGrid.innerHTML = gridHtml;
+    }
+    function calPrevMonth() { calCurrentDate.setMonth(calCurrentDate.getMonth() - 1); renderCustomCalendar(); }
+    function calNextMonth() { calCurrentDate.setMonth(calCurrentDate.getMonth() + 1); renderCustomCalendar(); }
+    function setCalToday() { document.getElementById(calTargetInputId).value = formatDateDDMMYY(new Date()); closeCalendarPicker(); }
+    function selectCalendarDate(day, month, year) { document.getElementById(calTargetInputId).value = formatDateDDMMYY(new Date(year, month, day)); closeCalendarPicker(); }
+
+    function showCustomConfirm(title, message) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById("confirmModal");
+        document.getElementById("confirmModalTitle").innerText = title;
+        document.getElementById("confirmModalMsg").innerText = message;
+        modal.classList.remove("hidden");
+        const cancelBtn = document.getElementById("confirmCancelBtn"), okBtn = document.getElementById("confirmOkBtn");
+        function cleanup() { modal.classList.add("hidden"); cancelBtn.removeEventListener("click", onCancel); okBtn.removeEventListener("click", onOk); }
+        function onCancel() { cleanup(); resolve(false); }
+        function onOk() { cleanup(); resolve(true); }
+        cancelBtn.addEventListener("click", onCancel); okBtn.addEventListener("click", onOk);
+      });
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      let icon = "fa-info-circle", bg = "bg-slate-900 text-white";
+      if (type === 'success') { icon = "fa-check-circle"; bg = "bg-emerald-700 text-white"; }
+      else if (type === 'error') { icon = "fa-triangle-exclamation"; bg = "bg-rose-700 text-white"; }
+      toast.className = `${bg} px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2.5 pointer-events-auto transform transition-all duration-200 translate-y-2 opacity-0 font-sans`;
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => { toast.classList.remove('translate-y-2', 'opacity-0'); });
+      setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 200); }, 3000);
+    }
+
+    function openDataModal() { document.getElementById("dataModal").classList.remove("hidden"); }
+    function closeDataModal() { document.getElementById("dataModal").classList.add("hidden"); }
+
+    // ================= PDF & CSV EXPORTS =================
+    async function exportToPDF(mode = 'minimal') {
+      if (transactions.length === 0) { showToast("No data available to export", "error"); return; }
+      const m = getFinancialMetrics();
+      const printContainer = document.getElementById("printArea");
+      const isReceiptMode = (mode === 'with-receipts');
+      const isNoStdMode = (mode === 'minimal-no-dept');
+      const sortedAllTransactions = [...transactions].sort(sortRecentFirst);
+
+      const stdMap = { 'General': 0 };
+      STUDENTS.forEach(s => stdMap[s.name] = 0);
+      m.incomes.forEach(t => {
+        const s = (t.student && t.student.trim() !== '') ? t.student : 'General';
+        if (stdMap[s] !== undefined) stdMap[s] += Number(t.amount || 0); else stdMap[s] = Number(t.amount || 0);
+      });
+      const sortedStudents = Object.keys(stdMap).sort((a, b) => stdMap[b] - stdMap[a]);
+
+      if (isReceiptMode) {
+        printContainer.innerHTML = `
+          <div style="font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; color: #0f172a; max-width: 950px; margin: 0 auto; line-height: 1.45;">
+            <div style="border-bottom: 3px solid #4f46e5; padding-bottom: 14px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #4f46e5; color: white; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px;">OFFICIAL</span>
+                  <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px;">CLASS TRIP LEDGER</h1>
+                </div>
+                <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0; font-weight: 600;">IV Finance Manager Audit Report & Bill Verification Dossier</p>
+              </div>
+              <div style="text-align: right; font-size: 11px; color: #64748b;">
+                <p style="margin: 0;">Audit Date: <strong>${new Date().toLocaleString()}</strong></p>
+                <p style="margin: 2px 0 0 0;">Format: <strong style="color: #4f46e5;">Audit Dossier with Proofs</strong></p>
+              </div>
+            </div>
+
+            <div class="avoid-break" style="margin-bottom: 22px;">
+              <h2 style="font-size: 12px; text-transform: uppercase; color: #475569; letter-spacing: 1px; font-weight: 800; margin: 0 0 10px 0;">Executive Balance Summary</h2>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 12px;">
+                  <span style="font-size: 10px; font-weight: 700; color: #166534; text-transform: uppercase;">Total Inflow (Income)</span>
+                  <div style="font-size: 20px; font-weight: 800; color: #15803d; margin-top: 4px;">₹${m.totalIncome.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 10px; color: #166534; margin-top: 6px; border-top: 1px solid #bbf7d0; padding-top: 4px;">
+                    GPay: <strong>₹${m.incomeGpay.toLocaleString('en-IN')}</strong> | Cash: <strong>₹${m.incomeCash.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px; padding: 12px;">
+                  <span style="font-size: 10px; font-weight: 700; color: #991b1b; text-transform: uppercase;">Total Outflow (Expense)</span>
+                  <div style="font-size: 20px; font-weight: 800; color: #b91c1c; margin-top: 4px;">₹${m.totalExpense.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 10px; color: #991b1b; margin-top: 6px; border-top: 1px solid #fecaca; padding-top: 4px;">
+                    GPay: <strong>₹${m.expenseGpay.toLocaleString('en-IN')}</strong> | Cash: <strong>₹${m.expenseCash.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+                <div style="background: #eef2ff; border: 1px solid #a5b4fc; border-radius: 12px; padding: 12px;">
+                  <span style="font-size: 10px; font-weight: 700; color: #3730a3; text-transform: uppercase;">Closing Net Balance</span>
+                  <div style="font-size: 20px; font-weight: 800; color: #4338ca; margin-top: 4px;">₹${m.netBal.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 10px; color: #3730a3; margin-top: 6px; border-top: 1px solid #c7d2fe; padding-top: 4px;">
+                    GPay Net: <strong>₹${m.gpayBal.toLocaleString('en-IN')}</strong> | Cash Net: <strong>₹${m.cashBal.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+              <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline;">
+                <h2 style="font-size: 13px; text-transform: uppercase; color: #0f172a; font-weight: 800; margin: 0; letter-spacing: 0.5px;">Audit Ledger & Bill Records (${sortedAllTransactions.length} Entries)</h2>
+                <span style="font-size: 11px; color: #64748b; font-weight: 600;">Left: Details | Right: Attached Proof</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                ${sortedAllTransactions.map((t, idx) => `
+                  <div class="avoid-break" style="border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; background: ${t.isVerified ? '#f8fafc' : '#ffffff'}; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 16px; align-items: stretch;">
+                    <div style="flex: 1.3; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px dashed #cbd5e1; padding-right: 14px;">
+                      <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                          <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="background: #0f172a; color: #ffffff; font-weight: 800; font-size: 10px; padding: 2px 7px; border-radius: 5px;">#${idx + 1}</span>
+                            <span style="background: ${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color: ${t.type === 'income' ? '#15803d' : '#b91c1c'}; font-weight: 800; font-size: 10px; padding: 2px 8px; border-radius: 5px; text-transform: uppercase;">${t.type}</span>
+                            <span style="font-size: 11px; font-weight: 700; color: #475569;">${t.date}</span>
+                          </div>
+                          <span style="background: ${t.mode === 'gpay' ? '#eff6ff' : '#f0fdf4'}; color: ${t.mode === 'gpay' ? '#1d4ed8' : '#15803d'}; font-weight: 700; font-size: 10px; padding: 2px 8px; border-radius: 5px; border: 1px solid ${t.mode === 'gpay' ? '#bfdbfe' : '#bbf7d0'}; text-transform: uppercase;">${t.mode}</span>
+                        </div>
+                        <div style="font-size: 20px; font-weight: 800; color: ${t.type === 'income' ? '#15803d' : '#b91c1c'}; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                          <span>${t.type === 'income' ? '+' : '-'} ₹${Number(t.amount).toLocaleString('en-IN')}</span>${t.isVerified ? '<span style="font-size: 11px; color: #0095f6; font-weight: 700;">[✓ Verified]</span>' : ''}
+                        </div>
+                        <table style="width: 100%; font-size: 11px; border-collapse: collapse; line-height: 1.6;">
+                          <tr><td style="color: #64748b; font-weight: 600; width: 35%;">Description:</td><td style="font-weight: 700; color: #0f172a;">${escapeHtml(t.description || 'N/A')}</td></tr>
+                          <tr><td style="color: #64748b; font-weight: 600;">${t.type === 'income' ? 'Student:' : 'Paid / Given To:'}</td><td style="font-weight: 600; color: #0f172a;">${escapeHtml(t.type === 'income' ? t.student : t.whoGave || '-')}</td></tr>
+                          <tr><td style="color: #64748b; font-weight: 600; vertical-align: top;">Remark / Verification:</td><td style="color: #334155; font-family: monospace; white-space: pre-line; font-size: 9.5px; background: #f8fafc; padding: 4px 6px; border-radius: 4px;">${escapeHtml(t.remark || '-')}</td></tr>
+                        </table>
+                      </div>
+                      <div style="font-size: 9.5px; color: #94a3b8; margin-top: 8px; border-top: 1px solid #f1f5f9; padding-top: 4px;">System ID: ${t.id}</div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; min-height: 180px;">
+                      ${t.receiptImage ? `
+                        <div style="width: 100%; text-align: center;">
+                          <div style="font-size: 9.5px; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fa-solid fa-paperclip text-indigo-600"></i> Verification Proof</div>
+                          <img src="${t.receiptImage}" alt="Receipt #${idx + 1}" style="max-height: 220px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; display: block; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        </div>
+                      ` : `<div style="text-align: center; color: #94a3b8; font-size: 11px; padding: 20px;"><i class="fa-regular fa-image" style="font-size: 24px; margin-bottom: 6px; display: block; color: #cbd5e1;"></i><span>No receipt photo attached</span></div>`}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase;">⚡ powered by maddiverse</div>
+          </div>
+        `;
+      } else {
+        printContainer.innerHTML = `
+          <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; max-width: 1000px; margin: 0 auto; line-height: 1.35;">
+            <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+              <div>
+                <h1 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 0;">CLASS TRIP LEDGER</h1>
+                <p style="font-size: 11.5px; color: #64748b; margin: 2px 0 0 0; font-weight: 600;">IV Finance Manager - Financial Statement ${isNoStdMode ? '(Executive Minimal)' : '& Student Summary'}</p>
+              </div>
+              <div style="text-align: right; font-size: 10.5px; color: #64748b;">
+                <p style="margin: 0;">Generated: <strong>${new Date().toLocaleString()}</strong></p>
+                <p style="margin: 2px 0 0 0;">Order: <strong>Recent First</strong></p>
+              </div>
+            </div>
+            
+            <div class="avoid-break" style="margin-bottom: 16px;">
+              <h2 style="font-size: 11px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; margin: 0 0 8px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; font-weight: 800;">Executive Balance Summary</h2>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px;">
+                  <span style="font-size: 9.5px; font-weight: 700; color: #166534; text-transform: uppercase;">Total Income</span>
+                  <div style="font-size: 18px; font-weight: 800; color: #15803d; margin-top: 2px;">₹${m.totalIncome.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 9px; color: #166534; margin-top: 4px; border-top: 1px solid #dcfce7; padding-top: 3px;">GPay: <strong>₹${m.incomeGpay.toLocaleString('en-IN')}</strong> | Cash: <strong>₹${m.incomeCash.toLocaleString('en-IN')}</strong></div>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px;">
+                  <span style="font-size: 9.5px; font-weight: 700; color: #991b1b; text-transform: uppercase;">Total Expense</span>
+                  <div style="font-size: 18px; font-weight: 800; color: #b91c1c; margin-top: 2px;">₹${m.totalExpense.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 9px; color: #991b1b; margin-top: 4px; border-top: 1px solid #fee2e2; padding-top: 3px;">GPay: <strong>₹${m.expenseGpay.toLocaleString('en-IN')}</strong> | Cash: <strong>₹${m.expenseCash.toLocaleString('en-IN')}</strong></div>
+                </div>
+                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px;">
+                  <span style="font-size: 9.5px; font-weight: 700; color: #3730a3; text-transform: uppercase;">Net Balance</span>
+                  <div style="font-size: 18px; font-weight: 800; color: #4338ca; margin-top: 2px;">₹${m.netBal.toLocaleString('en-IN')}</div>
+                  <div style="font-size: 9px; color: #3730a3; margin-top: 4px; border-top: 1px solid #e0e7ff; padding-top: 3px;">GPay Net: <strong>₹${m.gpayBal.toLocaleString('en-IN')}</strong> | Cash Net: <strong>₹${m.cashBal.toLocaleString('en-IN')}</strong></div>
+                </div>
+              </div>
+            </div>
+
+            ${!isNoStdMode ? `
+              <div class="avoid-break" style="margin-bottom: 18px;">
+                <h2 style="font-size: 11px; text-transform: uppercase; color: #4338ca; font-weight: 800; margin: 0 0 6px 0; border-bottom: 1px solid #e0e7ff; padding-bottom: 3px;">Student Income Distribution</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                  <thead>
+                    <tr style="background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #cbd5e1; text-align: left;">
+                      <th style="padding: 4px 6px;">Student</th><th style="padding: 4px 6px; text-align: right;">Amount (₹)</th><th style="padding: 4px 6px; text-align: right; width: 60px;">Share (%)</th>
+                      <th style="padding: 4px 6px; border-left: 1px solid #e2e8f0;">Student</th><th style="padding: 4px 6px; text-align: right;">Amount (₹)</th><th style="padding: 4px 6px; text-align: right; width: 60px;">Share (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${(() => {
+              const half = Math.ceil(sortedStudents.length / 2);
+              let rows = '';
+              if (sortedStudents.length === 0) return `<tr><td colspan="6" style="padding: 6px; text-align: center;">No student data available</td></tr>`;
+              for (let i = 0; i < half; i++) {
+                const d1 = sortedStudents[i]; const a1 = stdMap[d1] || 0; const p1 = m.totalIncome > 0 ? ((a1 / m.totalIncome) * 100).toFixed(1) : '0.0';
+                const d2 = sortedStudents[i + half]; const a2 = d2 ? (stdMap[d2] || 0) : null; const p2 = (d2 && m.totalIncome > 0) ? ((a2 / m.totalIncome) * 100).toFixed(1) : (d2 ? '0.0' : '');
+                rows += `<tr style="border-bottom: 1px solid #f1f5f9; background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                            <td style="padding: 3.5px 6px; font-weight: 600;">${escapeHtml(d1)}</td><td style="padding: 3.5px 6px; text-align: right; font-weight: 700; color: #166534;">₹${a1.toLocaleString('en-IN')}</td><td style="padding: 3.5px 6px; text-align: right; color: #64748b;">${p1}%</td>
+                            <td style="padding: 3.5px 6px; font-weight: 600; border-left: 1px solid #e2e8f0;">${d2 ? escapeHtml(d2) : '-'}</td><td style="padding: 3.5px 6px; text-align: right; font-weight: 700; color: #166534;">${d2 ? '₹' + a2.toLocaleString('en-IN') : '-'}</td><td style="padding: 3.5px 6px; text-align: right; color: #64748b;">${d2 ? p2 + '%' : '-'}</td>
+                          </tr>`;
+              }
+              return rows;
+            })()}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+
+            <div class="avoid-break" style="margin-bottom: 18px;">
+              <h2 style="font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 800; margin: 0 0 6px 0;">1. Income Ledger (${m.incomes.length} Entries - Recent First)</h2>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9.5px; table-layout: fixed;">
+                <thead>
+                  <tr style="background: #f0fdf4; border-top: 1px solid #86efac; border-bottom: 2px solid #86efac; text-align: left;">
+                    <th style="padding: 4px 6px; width: 65px;">Date</th><th style="padding: 4px 6px; width: 20%;">Student</th>
+                    <th style="padding: 4px 6px; width: 42px;">Mode</th><th style="padding: 4px 6px; width: 22%;">Description</th>
+                    <th style="padding: 4px 6px; width: 25%;">Remark</th><th style="padding: 4px 6px; text-align: right; width: 14%;">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${m.incomes.length === 0 ? '<tr><td colspan="6" style="text-align: center; padding: 8px; color: #94a3b8;">No income recorded</td></tr>' : ''}
+                  ${m.incomes.map((t, idx) => `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; vertical-align: top;">
+                      <td style="padding: 4px 6px;">${t.date}</td>
+                      <td style="padding: 4px 6px; font-weight: 600;">${escapeHtml(t.student || 'General')}</td>
+                      <td style="padding: 4px 6px; font-weight: 700; text-transform: uppercase; color: ${t.mode === 'gpay' ? '#2563eb' : '#059669'}; font-family: monospace;">${t.mode}</td>
+                      <td style="padding: 4px 6px;">${escapeHtml(t.description || '-')}</td>
+                      <td style="padding: 4px 6px; font-size: 8px; font-family: monospace; line-height: 1.25; color: #475569; white-space: pre-line; word-break: break-all;">${escapeHtml(t.remark || '-')}</td>
+                      <td style="padding: 4px 6px; text-align: right; font-weight: 700; color: #16a34a;">+ ₹${Number(t.amount).toLocaleString('en-IN')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="background: #ecfdf5; font-weight: 700; border-top: 2px solid #6ee7b7; border-bottom: 2px solid #6ee7b7;">
+                    <td colspan="3" style="padding: 5px;">INCOME SUBTOTALS:</td>
+                    <td colspan="2" style="padding: 5px; font-size: 9px; color: #047857;">GPay: ₹${m.incomeGpay.toLocaleString('en-IN')} | Cash: ₹${m.incomeCash.toLocaleString('en-IN')}</td>
+                    <td style="padding: 5px; text-align: right; color: #15803d; font-size: 11px;">₹${m.totalIncome.toLocaleString('en-IN')}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="avoid-break" style="margin-bottom: 18px;">
+              <h2 style="font-size: 11px; text-transform: uppercase; color: #991b1b; font-weight: 800; margin: 0 0 6px 0;">2. Expense Ledger (${m.expenses.length} Entries - Recent First)</h2>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9.5px; table-layout: fixed;">
+                <thead>
+                  <tr style="background: #fef2f2; border-top: 1px solid #fca5a5; border-bottom: 2px solid #fca5a5; text-align: left;">
+                    <th style="padding: 4px 6px; width: 65px;">Date</th><th style="padding: 4px 6px; width: 22%;">Paid To / Given To</th>
+                    <th style="padding: 4px 6px; width: 42px;">Mode</th><th style="padding: 4px 6px; width: 24%;">Description</th>
+                    <th style="padding: 4px 6px; width: 33%;">Remark</th><th style="padding: 4px 6px; text-align: right; width: 14%;">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${m.expenses.length === 0 ? '<tr><td colspan="6" style="text-align: center; padding: 8px; color: #94a3b8;">No expenses recorded</td></tr>' : ''}
+                  ${m.expenses.map((t, idx) => `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; vertical-align: top;">
+                      <td style="padding: 4px 6px;">${t.date}</td>
+                      <td style="padding: 4px 6px; font-weight: 600;">${escapeHtml(t.whoGave || '-')}</td>
+                      <td style="padding: 4px 6px; font-weight: 700; text-transform: uppercase; color: ${t.mode === 'gpay' ? '#2563eb' : '#059669'}; font-family: monospace;">${t.mode}</td>
+                      <td style="padding: 4px 6px;">${escapeHtml(t.description || '-')}</td>
+                      <td style="padding: 4px 6px; font-size: 8px; font-family: monospace; line-height: 1.25; color: #475569; white-space: pre-line; word-break: break-all;">${escapeHtml(t.remark || '-')}</td>
+                      <td style="padding: 4px 6px; text-align: right; font-weight: 700; color: #dc2626;">- ₹${Number(t.amount).toLocaleString('en-IN')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="background: #fff1f2; font-weight: 700; border-top: 2px solid #fda4af; border-bottom: 2px solid #fda4af;">
+                    <td colspan="2" style="padding: 5px;">EXPENSE SUBTOTALS:</td>
+                    <td colspan="3" style="padding: 5px; font-size: 9px; color: #be123c;">GPay: ₹${m.expenseGpay.toLocaleString('en-IN')} | Cash: ₹${m.expenseCash.toLocaleString('en-IN')}</td>
+                    <td style="padding: 5px; text-align: right; color: #b91c1c; font-size: 11px;">₹${m.totalExpense.toLocaleString('en-IN')}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: center; font-size: 9px; font-weight: 800; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; font-family: monospace;">⚡ powered by maddiverse</div>
+          </div>
+        `;
+      }
+      closeDataModal();
+      const images = Array.from(printContainer.querySelectorAll('img'));
+      await Promise.all(images.map(img => { if (img.complete) return Promise.resolve(); return new Promise(r => { img.onload = img.onerror = r; }); }));
+      await new Promise(r => setTimeout(r, 250));
+      window.print();
+    }
+
+    function exportToCSV() {
+      if (transactions.length === 0) { showToast("No data available to export", "error"); return; }
+      const m = getFinancialMetrics();
+      const csvLines = [];
+      const escapeCSV = (val) => { if (val === null || val === undefined) return '""'; return `"${String(val).replace(/"/g, '""')}"`; };
+
+      csvLines.push(["MADDY'S LEDGER - CLASS TRIP FINANCE STATEMENT"]);
+      csvLines.push([`Generated On:`, `${new Date().toLocaleString()}`]);
+      csvLines.push([`Finance Head:`, `IV Finance Manager`]);
+      csvLines.push([`Database:`, `MongoDB Atlas Cloud`]);
+      csvLines.push([""]);
+
+      csvLines.push(["=== EXECUTIVE SUMMARY & RECONCILIATION ==="]);
+      csvLines.push(["Category", "Google Pay (INR)", "Cash (INR)", "Total Amount (INR)"]);
+      csvLines.push(["Total Income", m.incomeGpay, m.incomeCash, m.totalIncome]);
+      csvLines.push(["Total Expense", m.expenseGpay, m.expenseCash, m.totalExpense]);
+      csvLines.push(["Net Balance", m.gpayBal, m.cashBal, m.netBal]);
+      csvLines.push([""]);
+
+      const stdMap = { 'General': 0 };
+      STUDENTS.forEach(s => stdMap[s.name] = 0);
+      m.incomes.forEach(t => {
+        const d = (t.student && t.student.trim() !== '') ? t.student : 'General';
+        if (stdMap[d] !== undefined) stdMap[d] += Number(t.amount || 0); else stdMap[d] = Number(t.amount || 0);
+      });
+      const sortedStudents = Object.keys(stdMap).sort((a, b) => stdMap[b] - stdMap[a]);
+
+      csvLines.push(["=== STUDENT INCOME BREAKDOWN ==="]);
+      csvLines.push(["Student", "Total Collections (INR)", "Percentage Share (%)"]);
+      sortedStudents.forEach(d => {
+        const amt = stdMap[d] || 0;
+        const pct = m.totalIncome > 0 ? ((amt / m.totalIncome) * 100).toFixed(2) : 0;
+        csvLines.push([escapeCSV(d), amt, `${pct}%`]);
+      });
+      csvLines.push([""]);
+
+      csvLines.push(["=== 1. ITEMIZED INCOME LEDGER (RECENT FIRST) ==="]);
+      csvLines.push(["Date (DD-MM-YY)", "Student", "Transaction Mode", "Verified Status", "Short Description", "Remark (From / To / UPI ID)", "Amount (INR)"]);
+      m.incomes.forEach(t => {
+        csvLines.push([escapeCSV(t.date), escapeCSV(t.student || 'General'), escapeCSV(t.mode.toUpperCase()), escapeCSV(t.isVerified ? "VERIFIED" : "UNVERIFIED"), escapeCSV(t.description), escapeCSV((t.remark || '-').replace(/\n/g, ' | ')), t.amount]);
+      });
+      csvLines.push([escapeCSV("INCOME SUBTOTALS"), escapeCSV(`GPay: ${m.incomeGpay}`), escapeCSV(`Cash: ${m.incomeCash}`), escapeCSV(""), escapeCSV(""), escapeCSV("Total Income:"), m.totalIncome]);
+      csvLines.push([""]);
+
+      csvLines.push(["=== 2. ITEMIZED EXPENSE LEDGER (RECENT FIRST) ==="]);
+      csvLines.push(["Date (DD-MM-YY)", "Paid To / Given To", "Transaction Mode", "Verified Status", "Short Description", "Remark (From / To / UPI ID)", "Amount (INR)"]);
+      m.expenses.forEach(t => {
+        csvLines.push([escapeCSV(t.date), escapeCSV(t.whoGave), escapeCSV(t.mode.toUpperCase()), escapeCSV(t.isVerified ? "VERIFIED" : "UNVERIFIED"), escapeCSV(t.description), escapeCSV((t.remark || '-').replace(/\n/g, ' | ')), t.amount]);
+      });
+      csvLines.push([escapeCSV("EXPENSE SUBTOTALS"), escapeCSV(`GPay: ${m.expenseGpay}`), escapeCSV(`Cash: ${m.expenseCash}`), escapeCSV(""), escapeCSV("Total Expense:"), m.totalExpense]);
+
+      const csvString = "\uFEFF" + csvLines.map(row => row.join(",")).join("\r\n");
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url); link.setAttribute("download", `ClassTrip_Finance_Statement_${getTodayFormatted()}.csv`);
+      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+      showToast("Well-formatted CSV downloaded!", "success"); closeDataModal();
+    }
+
+    function exportJSONBackup() {
+      const backupPayload = {
+        app: "ClassTripLedger", version: "6.0", exportDate: new Date().toISOString(),
+        transactions: transactions, recycleBin: recycleBin, students: STUDENTS, perHeadBudget: perHeadBudget
+      };
+      const jsonStr = JSON.stringify(backupPayload, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement('a'); downloadAnchor.setAttribute("href", url);
+      downloadAnchor.setAttribute("download", `ClassTrip_FullBackup_${getTodayFormatted()}.json`);
+      document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove(); URL.revokeObjectURL(url);
+      showToast("Full backup (with all photos) exported!", "success"); closeDataModal();
+    }
+
+    async function importJSONBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const confirmed = await showCustomConfirm("Restore Full Database", "Upload this JSON backup file to MongoDB Atlas?");
+      if (!confirmed) { event.target.value = ''; return; }
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          const payload = {
+            transactions: importedData.transactions || (Array.isArray(importedData) ? importedData : []),
+            recycleBin: importedData.recycleBin || [],
+            students: importedData.students || [],
+            perHeadBudget: importedData.perHeadBudget || 0
+          };
+
+          const res = await fetch('/api/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            showToast(data.message, "success");
+            await fetchAllCloudData();
+            closeDataModal();
+          } else {
+            showToast(data.error || "Failed to import JSON", "error");
+          }
+        } catch (err) {
+          showToast("Failed to read JSON backup file", "error");
+        }
+      };
+      reader.readAsText(file); event.target.value = '';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+
+</html>
+
+
