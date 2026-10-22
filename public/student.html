@@ -77,6 +77,23 @@
 
 <body class="bg-slate-50 font-sans min-h-screen flex flex-col text-slate-900">
 
+  <!-- ================= POPUP LOADING OVERLAY ================= -->
+  <div id="loadingPopup"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-all duration-200">
+    <div class="bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center justify-center text-center max-w-xs w-full space-y-3.5">
+      <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-college-600 text-2xl shadow-inner">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+      </div>
+      <div class="space-y-1">
+        <h4 class="font-display font-bold text-sm text-slate-900" id="loadingPopupTitle">Loading Account...</h4>
+        <p class="text-[11px] text-slate-500 font-medium" id="loadingPopupSub">Syncing with Central Cloud Store</p>
+      </div>
+      <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+        <div class="bg-gradient-to-r from-college-600 to-indigo-600 h-full w-2/3 rounded-full animate-pulse"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= HEADER ================= -->
   <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
     <div class="max-w-4xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between">
@@ -320,7 +337,23 @@
       box.classList.remove('hidden');
     }
 
-    async function loadStudentDashboard() {
+        function showLoadingPopup(title = "Loading Account...", sub = "Syncing with Central Cloud Store") {
+      const el = document.getElementById('loadingPopup');
+      if (!el) return;
+      document.getElementById('loadingPopupTitle').innerText = title;
+      document.getElementById('loadingPopupSub').innerText = sub;
+      el.classList.remove('hidden');
+    }
+
+    function hideLoadingPopup() {
+      const el = document.getElementById('loadingPopup');
+      if (el) el.classList.add('hidden');
+    }
+
+    async function loadStudentDashboard(options = {}) {
+      if (!options || !options.background) {
+        showLoadingPopup("Loading Account...", "Syncing latest payments & balance");
+      }
       try {
         // Authentication is checked separately from the dashboard API.
         const authRes = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -362,7 +395,10 @@
         }
         studentData = data;
         renderDashboard(data);
+        hideLoadingPopup();
+        startDynamicSync();
       } catch (err) {
+        hideLoadingPopup();
         console.error('Failed to load dashboard:', err);
         showDashboardError('Unable to connect to the server or read the dashboard response. Check your connection and browser console.');
       }
@@ -555,10 +591,38 @@
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    document.addEventListener('DOMContentLoaded', loadStudentDashboard);
+        // Dynamic real-time sync when data changes
+    let studentSyncTimer = null;
+    function startDynamicSync() {
+      if (studentSyncTimer) return;
+      studentSyncTimer = setInterval(async () => {
+        if (!document.hidden) {
+          try {
+            const res = await fetch('/api/student/dashboard', { credentials: 'same-origin' });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.financialSummary) {
+                studentData = data;
+                renderDashboard(data);
+              }
+            }
+          } catch (e) { }
+        }
+      }, 8000);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        loadStudentDashboard({ background: true });
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => loadStudentDashboard());
   </script>
 </body>
 
 </html>
+
+
 
 
