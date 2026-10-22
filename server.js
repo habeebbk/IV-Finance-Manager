@@ -85,7 +85,7 @@ async function seedDefaultAdmin() {
 async function startServer() {
   try {
     console.log('Connecting to MongoDB Atlas / Database...');
-    await mongoose.connect(MONGO_URI);
+    await mongoose.connect(MONGO_URI, { dbName: 'trip_ledger' });
     console.log('✅ Connected successfully to MongoDB Database');
 
     // Express Session with MongoDB store
@@ -97,6 +97,7 @@ async function startServer() {
         proxy: true, // Crucial for reverse proxy environments like Render
         store: MongoStore.create({
           mongoUrl: MONGO_URI,
+          dbName: 'trip_ledger',
           collectionName: 'sessions',
           ttl: 14 * 24 * 60 * 60, // 14 days
           touchAfter: 24 * 3600,   // Only update session once per 24h
@@ -193,6 +194,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
