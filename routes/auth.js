@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
@@ -38,10 +38,17 @@ router.post('/login', async (req, res) => {
         name: 'Administrator'
       };
 
-      return res.json({
-        success: true,
-        user: req.session.user,
-        redirectTo: '/index.html'
+      // Explicitly save session before responding to avoid race condition on redirects
+      return req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+          return res.status(500).json({ error: 'Failed to save session' });
+        }
+        return res.json({
+          success: true,
+          user: req.session.user,
+          redirectTo: '/index.html'
+        });
       });
     }
 
@@ -68,10 +75,17 @@ router.post('/login', async (req, res) => {
       name: student.name
     };
 
-    return res.json({
-      success: true,
-      user: req.session.user,
-      redirectTo: '/student.html'
+    // Explicitly save session before responding to avoid race condition on redirects
+    return req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error('Student session save error:', saveErr);
+        return res.status(500).json({ error: 'Failed to save session' });
+      }
+      return res.json({
+        success: true,
+        user: req.session.user,
+        redirectTo: '/student.html'
+      });
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -133,7 +147,7 @@ router.post('/change-password', requireAuth, async (req, res) => {
       }
 
       student.passwordHash = await bcrypt.hash(newPassword, 10);
-      student.initialPassword = ''; // cleared once updated
+      student.initialPassword = '';
       await student.save();
       return res.json({ success: true, message: 'Password updated successfully' });
     }

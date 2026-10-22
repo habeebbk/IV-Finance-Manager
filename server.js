@@ -37,7 +37,7 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 // Rate limit for authentication attempts to prevent brute force
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 25, // limit each IP to 25 login requests per windowMs
+  max: 50, // limit each IP to 25 login requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
@@ -94,6 +94,7 @@ async function startServer() {
         secret: SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
+        proxy: true, // Crucial for reverse proxy environments like Render
         store: MongoStore.create({
           mongoUrl: MONGO_URI,
           collectionName: 'sessions',
@@ -103,7 +104,7 @@ async function startServer() {
         }),
         cookie: {
           httpOnly: true,
-          secure: IS_PROD, // true in production with HTTPS
+          secure: 'auto', // Automatically uses secure cookies when accessed via HTTPS
           sameSite: 'lax',
           maxAge: 14 * 24 * 60 * 60 * 1000
         }
@@ -192,5 +193,6 @@ async function startServer() {
 }
 
 startServer();
+
 
 
