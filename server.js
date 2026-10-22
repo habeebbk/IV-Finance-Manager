@@ -43,19 +43,38 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
 });
 
-// Seed initial admin user if not present
+// Seed or sync admin user from environment variables
 async function seedDefaultAdmin() {
   try {
-    const adminCount = await User.countDocuments({ role: 'admin' });
-    if (adminCount === 0) {
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+    const adminUsername = (process.env.ADMIN_USERNAME || 'admin').toLowerCase().trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+
+    let admin = await User.findOne({ role: 'admin' });
+    if (!admin) {
+      const passwordHash = await bcrypt.hash(adminPassword, 10);
       await User.create({
-        username: 'admin',
+        username: adminUsername,
         passwordHash,
         role: 'admin'
       });
-      console.log('✅ Default admin account created: username "admin", password "admin123"');
+      console.log(`✅ Default admin account created: username "${adminUsername}"`);
+    } else {
+      // Sync username if different
+      let needsSave = false;
+      if (admin.username !== adminUsername) {
+        admin.username = adminUsername;
+        needsSave = true;
+      }
+      // Check if password was changed in env
+      const match = await bcrypt.compare(adminPassword, admin.passwordHash);
+      if (!match) {
+        admin.passwordHash = await bcrypt.hash(adminPassword, 10);
+        needsSave = true;
+      }
+      if (needsSave) {
+        await admin.save();
+        console.log(`✅ Admin account updated to username "${adminUsername}" and new environment password`);
+      }
     }
   } catch (err) {
     console.error('Error seeding default admin:', err);
@@ -173,3 +192,5 @@ async function startServer() {
 }
 
 startServer();
+
+
